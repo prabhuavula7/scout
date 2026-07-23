@@ -5,15 +5,19 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { applyConfigToEnv } from "../config.js";
 
-// packages/cli/dist/commands/serve.js (bundled: dist/index.js) -> apps/web,
-// two levels up from packages/cli. In a published npx install, apps/web
-// isn't part of the package at all yet (tracked as a follow-up: bundling a
-// prebuilt viewer into the npm package rather than assuming a monorepo
-// checkout); this works today for the local monorepo / `pnpm --filter
-// scoutcli dev` path.
-function resolveWebAppDir(): string {
+// packages/cli/dist/index.js -> dist/viewer (apps/web's built .next output,
+// see tsup.config.ts's onSuccess) and ../node_modules/.bin/next (next is a
+// real dependency of this package, resolved normally by npm/pnpm, not a
+// workspace symlink), so `next start` works the same whether this is a
+// monorepo checkout or a real npm global install.
+function resolveViewerDir(): string {
   const here = path.dirname(fileURLToPath(import.meta.url)); // packages/cli/dist
-  return path.resolve(here, "../../../apps/web");
+  return path.join(here, "viewer");
+}
+
+function resolveNextBin(): string {
+  const here = path.dirname(fileURLToPath(import.meta.url)); // packages/cli/dist
+  return path.join(here, "..", "node_modules", ".bin", process.platform === "win32" ? "next.cmd" : "next");
 }
 
 export function registerServeCommand(program: Command): void {
@@ -24,26 +28,21 @@ export function registerServeCommand(program: Command): void {
     .action(async (options: { port: string }) => {
       await applyConfigToEnv();
 
-      const webAppDir = resolveWebAppDir();
-      if (!existsSync(webAppDir)) {
+      const viewerDir = resolveViewerDir();
+      const nextBin = resolveNextBin();
+
+      if (!existsSync(path.join(viewerDir, ".next")) || !existsSync(nextBin)) {
         console.error(
-          "scout serve isn't available in this install yet: it currently only runs from a full monorepo checkout " +
-            "(the local viewer isn't bundled into the published npm package yet). Use `scout chat <slug>` or " +
-            "`scout export <slug>` instead, or clone the repo and run `pnpm --filter scoutcli dev -- serve`. " +
-            "Tracked in ROADMAP.md.",
+          `Couldn't find the bundled viewer (expected ${viewerDir}/.next and ${nextBin}). ` +
+            "This build of scoutcli may be broken; try reinstalling, or if you're developing " +
+            "from source, run `pnpm build` from the repo root first.",
         );
         process.exitCode = 1;
         return;
       }
 
-      const nextBin = path.join(webAppDir, "node_modules", ".bin", process.platform === "win32" ? "next.cmd" : "next");
-      if (!existsSync(nextBin)) {
-        console.error(`Found ${webAppDir} but it isn't built yet. Run \`pnpm build\` from the repo root first.`);
-        process.exitCode = 1;
-        return;
-      }
       const child = spawn(nextBin, ["start", "-H", "127.0.0.1", "-p", options.port], {
-        cwd: webAppDir,
+        cwd: viewerDir,
         stdio: "inherit",
         env: { ...process.env },
       });

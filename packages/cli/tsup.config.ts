@@ -1,4 +1,4 @@
-import { cpSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "tsup";
@@ -27,5 +27,37 @@ export default defineConfig({
       path.join(here, "dist/registry"),
       { recursive: true },
     );
+
+    // scout serve ships apps/web's built .next output inside the npm
+    // package, and runs it via `next start`. `next`/`react`/`react-dom` are
+    // real dependencies of this package (see package.json) rather than
+    // pnpm workspace links, so a plain `npm install -g scoutcli` resolves
+    // them the normal way, no symlink/standalone-output gymnastics needed;
+    // API route handlers are already fully bundled into .next/server/**.js
+    // by Next's own webpack build, same as any other Next.js production
+    // build, so nothing from packages/agents etc. needs to be re-resolved
+    // at runtime here either. Requires apps/web to already be built (see
+    // the @scout/web devDependency, which makes turbo build it first).
+    const webNext = path.join(here, "../../apps/web/.next");
+    const webPublic = path.join(here, "../../apps/web/public");
+    const viewerOut = path.join(here, "dist/viewer");
+
+    if (existsSync(webNext)) {
+      // .next/cache is webpack's build cache (hundreds of MB), never read by
+      // `next start`; filtering it out is the difference between a
+      // multi-hundred-MB package and one a few MB.
+      cpSync(webNext, path.join(viewerOut, ".next"), {
+        recursive: true,
+        filter: (src) => !src.includes(`${path.sep}.next${path.sep}cache${path.sep}`) && !src.endsWith(`${path.sep}.next${path.sep}cache`),
+      });
+      if (existsSync(webPublic)) cpSync(webPublic, path.join(viewerOut, "public"), { recursive: true });
+      mkdirSync(viewerOut, { recursive: true });
+      writeFileSync(path.join(viewerOut, "package.json"), JSON.stringify({ name: "scout-viewer", version: "0.0.0", type: "module" }, null, 2));
+    } else {
+      console.warn(
+        "apps/web/.next not found, scout serve won't work in this build. " +
+          "Run `pnpm build` from the repo root (not just this package) to include it.",
+      );
+    }
   },
 });
