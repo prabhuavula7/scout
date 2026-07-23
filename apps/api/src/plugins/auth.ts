@@ -15,10 +15,18 @@ const DEV_USER_ID = "dev-local-user";
  * Verifies the Clerk session token on every request and attaches `userId`.
  * When CLERK_SECRET_KEY is not configured (fresh clone, keys not added yet)
  * we fall back to a single fixed dev user so the app is still runnable
- * end-to-end locally. This is explicitly logged, never silent.
+ * end-to-end locally. This is explicitly logged, never silent, and only
+ * ever allowed outside production: a production deployment with no Clerk
+ * key configured should fail loudly at boot, not silently share one
+ * identity across every visitor.
  */
 export default fp(async function authPlugin(app: FastifyInstance) {
   if (!env.CLERK_SECRET_KEY) {
+    if (env.NODE_ENV === "production") {
+      throw new Error(
+        "CLERK_SECRET_KEY is not set. Refusing to start in production with the unauthenticated dev-user fallback.",
+      );
+    }
     app.log.warn(
       "CLERK_SECRET_KEY is not set. Running with an unauthenticated dev user. Set it in .env for real auth.",
     );

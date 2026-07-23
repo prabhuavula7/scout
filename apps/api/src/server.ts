@@ -1,5 +1,6 @@
 import Fastify, { type FastifyError } from "fastify";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import { env } from "./env.js";
 import authPlugin from "./plugins/auth.js";
 import { projectRoutes } from "./routes/projects.js";
@@ -15,6 +16,10 @@ const app = Fastify({
 });
 
 await app.register(cors, { origin: env.WEB_ORIGIN, credentials: true });
+// Global default. Routes that call OpenAI (chat, import) set a stricter
+// per-route limit below, since those are the ones with a real cost per
+// request, not just a load-protection concern.
+await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
 await app.register(authPlugin);
 
 app.get("/health", async () => ({ status: "ok" }));

@@ -13,6 +13,7 @@
   "dependencies": {
     "@clerk/backend": "^1.21.4",
     "@fastify/cors": "^10.0.2",
+    "@fastify/rate-limit": "^11.1.0",
     "@integration-scout/agents": "workspace:*",
     "@integration-scout/ai": "workspace:*",
     "@integration-scout/connectors": "workspace:*",

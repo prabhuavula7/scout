@@ -2,6 +2,9 @@
 
 **Understand any enterprise platform in minutes.**
 
+[![CI](https://github.com/prabhuavula7/IntegrationScout/actions/workflows/ci.yml/badge.svg)](https://github.com/prabhuavula7/IntegrationScout/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 ![Integration Scout landing page](public/landing-page.png)
 
 ## What this is
@@ -410,6 +413,14 @@ pipeline (import, crawl, embed, chat) needs `pnpm docker:up` and
   `NEXT_PUBLIC_API_URL` at wherever `apps/api` ends up.
 - Swap local Postgres/Redis for hosted equivalents (Supabase, Upstash) by
   changing `DATABASE_URL`/`REDIS_URL`; no code changes required.
+- The unauthenticated dev-user fallback (used locally when `CLERK_SECRET_KEY`
+  is unset) refuses to start at all when `NODE_ENV=production`, so a real
+  deployment fails loudly at boot instead of silently sharing one identity
+  across every visitor.
+- The API rate-limits globally (100 requests/minute per IP) and more
+  strictly on the two OpenAI-backed routes, `POST /chat` (20/minute) and
+  `POST /projects/:id/platforms/import` (10/minute), since those carry a
+  real per-request cost, not just a load-protection concern.
 
 ## One more design note
 
