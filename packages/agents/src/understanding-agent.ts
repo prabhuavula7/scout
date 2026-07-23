@@ -1,8 +1,6 @@
-import { eq, desc } from "drizzle-orm";
-import type { LLMProvider } from "@integration-scout/ai";
-import type { Database } from "@integration-scout/db";
-import { schema } from "@integration-scout/db";
-import { PlatformUnderstanding } from "@integration-scout/types";
+import type { LLMProvider } from "@scout/ai";
+import type { AgentStore } from "@scout/store";
+import { PlatformUnderstanding } from "@scout/types";
 import { stripEmDashes } from "./base.js";
 
 const UnderstandingDraft = PlatformUnderstanding.omit({
@@ -32,7 +30,7 @@ export interface UnderstandingContext {
  * data passed in `context`, not hallucinated from the model's own priors.
  */
 export async function runUnderstandingAgent(
-  db: Database,
+  store: AgentStore,
   llm: LLMProvider,
   platformId: string,
   context: UnderstandingContext,
@@ -54,12 +52,7 @@ Generate the full integration blueprint now.`;
     schemaName: "platform_understanding",
   });
 
-  const citationChunks = await db
-    .select({ id: schema.docChunks.id })
-    .from(schema.docChunks)
-    .where(eq(schema.docChunks.platformId, platformId))
-    .orderBy(desc(schema.docChunks.createdAt))
-    .limit(20);
+  const citationChunks = await store.getRecentDocChunks(platformId, 20);
 
   const result = PlatformUnderstanding.parse({
     ...stripEmDashes(draft),
@@ -68,11 +61,5 @@ Generate the full integration blueprint now.`;
     generatedAt: new Date().toISOString(),
   });
 
-  await db
-    .insert(schema.platformUnderstanding)
-    .values({ platformId, data: result })
-    .onConflictDoUpdate({
-      target: schema.platformUnderstanding.platformId,
-      set: { data: result, generatedAt: new Date() },
-    });
+  await store.upsertUnderstanding(platformId, result);
 }

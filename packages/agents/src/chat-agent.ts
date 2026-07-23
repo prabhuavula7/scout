@@ -1,11 +1,10 @@
-import type { LLMProvider } from "@integration-scout/ai";
-import type { Database } from "@integration-scout/db";
-import { hybridSearch } from "@integration-scout/db";
-import { buildContextAndCitations } from "@integration-scout/rag";
-import type { Citation } from "@integration-scout/types";
+import type { LLMProvider } from "@scout/ai";
+import type { AgentStore } from "@scout/store";
+import { buildContextAndCitations } from "@scout/rag";
+import type { Citation } from "@scout/types";
 import { stripEmDashes } from "./base.js";
 
-const SYSTEM_PROMPT = `You are IntegrationScout's documentation assistant. Answer ONLY using the
+const SYSTEM_PROMPT = `You are Scout's documentation assistant. Answer ONLY using the
 numbered source excerpts provided in the context. Every claim must be
 traceable to a source. Cite sources inline using their bracket number, e.g.
 "Webhooks are signed with HMAC-SHA256 [2]." If the context does not contain
@@ -26,19 +25,19 @@ export interface ChatAgentResult {
  * included in the prompt.
  */
 export async function runChatAgent(
-  db: Database,
+  store: AgentStore,
   llm: LLMProvider,
   platformId: string,
   message: string,
   history: Array<{ role: "user" | "assistant"; content: string }>,
 ): Promise<ChatAgentResult> {
   const [queryEmbedding] = await llm.embed([message]);
-  const results = await hybridSearch(db, platformId, queryEmbedding!, message, 8);
+  const results = await store.hybridSearch(platformId, queryEmbedding!, message, 8);
 
   if (results.length === 0) {
     return {
       answer:
-        "I don't have any indexed documentation for this platform yet, so I can't answer that. Try importing docs first from the Import page.",
+        "I don't have any indexed documentation for this platform yet, so I can't answer that. Try importing docs first.",
       citations: [],
     };
   }

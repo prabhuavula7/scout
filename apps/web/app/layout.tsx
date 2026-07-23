@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Inter, IBM_Plex_Mono, Fraunces } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
@@ -18,9 +17,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Integration Scout: Understand any enterprise platform in minutes",
+  title: "Scout: Understand any enterprise platform in minutes",
   description:
-    "AI-powered integration discovery: import an API, crawl its docs, and get a complete integration blueprint in minutes.",
+    "Local viewer for Scout runs: point the scout CLI at an API, crawl its docs, and get a complete integration blueprint in minutes.",
 };
 
 const THEME_INIT_SCRIPT = `
@@ -37,15 +36,13 @@ const THEME_INIT_SCRIPT = `
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
-        <head>
-          <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        </head>
-        <body className={`${inter.variable} ${fraunces.variable} ${plexMono.variable} font-sans`}>
-          <Providers>{children}</Providers>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className={`${inter.variable} ${fraunces.variable} ${plexMono.variable} font-sans`}>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
   );
 }

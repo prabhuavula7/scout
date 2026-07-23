@@ -1,0 +1,9 @@
+{
+  "slug": "wordpress",
+  "name": "WordPress",
+  "category": "cms",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "basic",
+  "description": "WordPress REST API."
+}

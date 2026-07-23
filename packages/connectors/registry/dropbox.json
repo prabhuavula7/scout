@@ -1,0 +1,9 @@
+{
+  "slug": "dropbox",
+  "name": "Dropbox",
+  "category": "storage",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "oauth2",
+  "description": "Cloud file storage."
+}

@@ -1,5 +1,5 @@
 {
-  "extends": "@integration-scout/typescript-config/nextjs.json",
+  "extends": "@scout/typescript-config/nextjs.json",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src"

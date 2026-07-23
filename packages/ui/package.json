@@ -1,5 +1,5 @@
 {
-  "name": "@integration-scout/ui",
+  "name": "@scout/ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -20,7 +20,7 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
-    "@integration-scout/typescript-config": "workspace:*",
+    "@scout/typescript-config": "workspace:*",
     "@types/react": "^19.0.2",
     "typescript": "^5.7.2"
   }

@@ -1,8 +1,8 @@
 import * as cheerio from "cheerio";
 import TurndownService from "turndown";
-import type { LLMProvider } from "@integration-scout/ai";
-import type { Database } from "@integration-scout/db";
-import { chunkDocument, embedAndStoreChunks } from "@integration-scout/rag";
+import type { LLMProvider } from "@scout/ai";
+import type { AgentStore } from "@scout/store";
+import { chunkDocument, embedAndStoreChunks } from "@scout/rag";
 import { withRetry } from "./base.js";
 
 const turndown = new TurndownService({ headingStyle: "atx", codeBlockStyle: "fenced" });
@@ -61,7 +61,7 @@ export interface DocumentationAgentResult {
  * with rate limiting and scope rules, tracked in ROADMAP.md.
  */
 export async function runDocumentationAgent(
-  db: Database,
+  store: AgentStore,
   llm: LLMProvider,
   platformId: string,
   urls: string[],
@@ -77,7 +77,7 @@ export async function runDocumentationAgent(
       sourceTitle: page.title,
     });
     if (chunks.length > 0) {
-      chunksStored += await embedAndStoreChunks(db, llm, platformId, chunks);
+      chunksStored += await embedAndStoreChunks(store, llm, platformId, chunks);
     }
     pagesCrawled += 1;
   }

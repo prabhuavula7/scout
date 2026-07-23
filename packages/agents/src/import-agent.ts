@@ -1,5 +1,5 @@
 import { parse as parseYaml } from "yaml";
-import type { AuthScheme, Endpoint, EndpointParameter, ImportRequest } from "@integration-scout/types";
+import type { AuthScheme, Endpoint, EndpointParameter, ImportRequest } from "@scout/types";
 import { withRetry } from "./base.js";
 
 interface OpenAPIOperation {

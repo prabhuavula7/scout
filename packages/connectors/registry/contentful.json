@@ -1,0 +1,9 @@
+{
+  "slug": "contentful",
+  "name": "Contentful",
+  "category": "cms",
+  "implemented": true,
+  "suggestedDocsUrl": "https://www.contentful.com/developers/docs/",
+  "defaultAuthScheme": "bearer_token",
+  "description": "Headless CMS. Content Delivery, Management, and Preview APIs."
+}

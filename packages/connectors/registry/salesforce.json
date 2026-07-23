@@ -1,0 +1,9 @@
+{
+  "slug": "salesforce",
+  "name": "Salesforce",
+  "category": "crm",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "oauth2",
+  "description": "Enterprise CRM platform."
+}

@@ -1,5 +1,5 @@
 import { encode } from "gpt-tokenizer";
-import type { DocChunkMetadata } from "@integration-scout/types";
+import type { DocChunkMetadata } from "@scout/types";
 
 export interface ChunkInput {
   markdown: string;

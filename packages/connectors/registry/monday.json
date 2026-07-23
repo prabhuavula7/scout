@@ -1,0 +1,9 @@
+{
+  "slug": "monday",
+  "name": "Monday.com",
+  "category": "workflow",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "bearer_token",
+  "description": "Work OS / project workflows."
+}

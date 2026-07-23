@@ -1,95 +1,62 @@
+"use client";
+
 import Link from "next/link";
 import type { Route } from "next";
-import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
-import { ArrowRight, Boxes, GitBranch, MessageSquareText, Workflow } from "lucide-react";
-import { ThemeToggle } from "@integration-scout/ui";
-import { ScoutReticleBackground } from "@/components/scout-reticle-background";
-import { AetherFlowBackground } from "@/components/aether-flow-background";
+import { Compass, Terminal } from "lucide-react";
+import { EmptyState, StatusBadge, ThemeToggle } from "@scout/ui";
+import { useRuns } from "@/lib/use-runs";
 
-const FEATURES = [
-  {
-    icon: Boxes,
-    title: "Import anything",
-    description:
-      "OpenAPI, Swagger, GraphQL introspection, GitHub repos, Postman collections, or a raw docs URL.",
-  },
-  {
-    icon: GitBranch,
-    title: "AI understanding",
-    description:
-      "Auth flows, data models, entity relationships, and pitfalls, generated from what's actually in the docs, cited, never invented.",
-  },
-  {
-    icon: Workflow,
-    title: "Integration planning",
-    description:
-      "Ask for a sync strategy between two platforms and get architecture, sequence diagrams, and failure handling.",
-  },
-  {
-    icon: MessageSquareText,
-    title: "Grounded chat",
-    description: "RAG-powered Q&A over the crawled documentation, with inline source citations.",
-  },
-];
-
-export default async function LandingPage() {
-  const { userId } = await auth();
-  if (userId) redirect("/dashboard");
+export default function HomePage() {
+  const { data: runs, isLoading } = useRuns();
 
   return (
-    <main className="min-h-screen">
-      <section className="relative flex min-h-[640px] items-center overflow-hidden px-6 pt-32 pb-20 text-center">
-        <AetherFlowBackground />
-        <ScoutReticleBackground />
+    <main className="mx-auto max-w-4xl px-6 py-10">
+      <header className="flex items-center justify-between">
+        <span className="flex items-center gap-2 font-serif text-base font-medium tracking-tight">
+          <Compass className="h-4 w-4 text-accent-500" strokeWidth={1.75} />
+          Scout
+        </span>
+        <ThemeToggle />
+      </header>
 
-        <header className="absolute inset-x-0 top-0 z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-          <span className="font-serif text-base font-medium tracking-tight">Integration Scout</span>
-          <nav className="flex items-center gap-4 text-sm text-stone-600 dark:text-stone-400">
-            <Link href={"/sign-in" as Route} className="hover:text-stone-900 dark:hover:text-stone-100">
-              Sign in
-            </Link>
-            <Link
-              href={"/sign-up" as Route}
-              className="rounded-full bg-stone-900 px-4 py-2 font-medium text-white transition hover:bg-stone-700 dark:bg-white dark:text-stone-900 dark:hover:bg-stone-200"
-            >
-              Get started
-            </Link>
-            <ThemeToggle />
-          </nav>
-        </header>
+      <div className="mt-10">
+        <h1 className="font-serif text-2xl font-medium tracking-tight">Runs</h1>
+        <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
+          Everything you've pointed{" "}
+          <code className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs dark:bg-stone-900">
+            scout understand
+          </code>{" "}
+          at, stored locally under <code className="font-mono text-xs">~/.scout/runs</code>.
+        </p>
+      </div>
 
-        <div className="relative mx-auto w-full max-w-4xl">
-          <h1 className="font-serif text-4xl font-medium tracking-tight text-balance sm:text-6xl">
-            Understand any enterprise platform in minutes.
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-stone-600 dark:text-stone-400">
-            Point Integration Scout at an unfamiliar API (OpenAPI spec, docs site, or GitHub repo)
-            and get a complete, cited integration blueprint: auth flow, data model, workflows, and a
-            grounded chat assistant.
-          </p>
-          <div className="mt-10 flex items-center justify-center gap-4">
-            <Link
-              href={"/sign-up" as Route}
-              className="inline-flex items-center gap-2 rounded-full bg-stone-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-stone-700 dark:bg-white dark:text-stone-900 dark:hover:bg-stone-200"
-            >
-              Start a project <ArrowRight className="h-4 w-4" />
-            </Link>
+      <div className="mt-8">
+        {isLoading ? (
+          <p className="text-sm text-stone-500">Loading…</p>
+        ) : !runs || runs.length === 0 ? (
+          <EmptyState
+            icon={<Terminal className="h-8 w-8" />}
+            title="No runs yet"
+            description='Run "scout understand <spec-url>" from your terminal, then refresh this page.'
+          />
+        ) : (
+          <div className="divide-y divide-stone-200 rounded-xl border border-stone-200 dark:divide-stone-800 dark:border-stone-800">
+            {runs.map((run) => (
+              <Link
+                key={run.slug}
+                href={`/platform/${run.slug}/understanding` as Route}
+                className="flex items-center justify-between px-5 py-4 transition hover:bg-stone-50 dark:hover:bg-stone-900"
+              >
+                <div>
+                  <p className="font-medium text-stone-900 dark:text-stone-100">{run.name}</p>
+                  <p className="mt-0.5 text-xs text-stone-500">{run.connectorSlug}</p>
+                </div>
+                <StatusBadge status={run.status} />
+              </Link>
+            ))}
           </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 pb-32">
-        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-stone-200 bg-stone-200 sm:grid-cols-2 dark:border-stone-800 dark:bg-stone-800">
-          {FEATURES.map((feature) => (
-            <div key={feature.title} className="bg-white p-8 dark:bg-stone-950">
-              <feature.icon className="h-5 w-5 text-accent-500" strokeWidth={1.75} />
-              <h3 className="mt-4 font-serif text-lg font-medium">{feature.title}</h3>
-              <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">{feature.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+        )}
+      </div>
     </main>
   );
 }

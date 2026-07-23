@@ -1,7 +1,5 @@
-import { eq } from "drizzle-orm";
-import type { Database } from "@integration-scout/db";
-import { schema } from "@integration-scout/db";
-import type { AgentName } from "@integration-scout/types";
+import type { AgentStore } from "@scout/store";
+import type { AgentName } from "@scout/types";
 
 export interface RetryOptions {
   retries: number;
@@ -58,43 +56,26 @@ export function stripEmDashes<T>(value: T): T {
 }
 
 /**
- * Wraps an agent's execution in an `agent_runs` row so every step of the
- * pipeline is inspectable after the fact (goal/input/output/error/attempt),
- * satisfying the "agents have memory + validation" requirement without
- * needing a separate observability stack.
+ * Wraps an agent's execution in an agent-run record so every step of the
+ * pipeline is inspectable after the fact (goal/input/output/error), whether
+ * that record lands in a local JSONL log (LocalFileStore, the CLI default)
+ * or a Postgres table (DrizzleAgentStore, the dormant hosted mode).
  */
 export async function runAgent<TOutput>(
-  db: Database,
+  store: AgentStore,
   platformId: string,
   agent: AgentName,
   input: Record<string, unknown>,
   fn: () => Promise<TOutput>,
 ): Promise<TOutput> {
-  const [run] = await db
-    .insert(schema.agentRuns)
-    .values({ platformId, agent, status: "running", input, startedAt: new Date() })
-    .returning();
+  const { id } = await store.startAgentRun({ platformId, agent, input });
 
   try {
     const output = await fn();
-    await db
-      .update(schema.agentRuns)
-      .set({
-        status: "succeeded",
-        output: output as Record<string, unknown>,
-        finishedAt: new Date(),
-      })
-      .where(eq(schema.agentRuns.id, run!.id));
+    await store.completeAgentRun(id, output as Record<string, unknown>);
     return output;
   } catch (error) {
-    await db
-      .update(schema.agentRuns)
-      .set({
-        status: "failed",
-        error: error instanceof Error ? error.message : String(error),
-        finishedAt: new Date(),
-      })
-      .where(eq(schema.agentRuns.id, run!.id));
+    await store.failAgentRun(id, error instanceof Error ? error.message : String(error));
     throw error;
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@integration-scout/db",
+  "name": "@scout/db",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,11 +15,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@scout/store": "workspace:*",
+    "@scout/types": "workspace:*",
     "drizzle-orm": "^0.38.3",
     "pg": "^8.13.1"
   },
   "devDependencies": {
-    "@integration-scout/typescript-config": "workspace:*",
+    "@scout/typescript-config": "workspace:*",
     "@types/pg": "^8.11.10",
     "drizzle-kit": "^0.30.1",
     "tsx": "^4.19.2",

@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
-import { createDb, schema } from "@integration-scout/db";
-import { CreateProjectRequest, UpdateProjectRequest } from "@integration-scout/types";
+import { createDb, schema } from "@scout/db";
+import { CreateProjectRequest, UpdateProjectRequest } from "@scout/types";
 
 export async function projectRoutes(app: FastifyInstance) {
   const db = createDb();

@@ -1,6 +1,6 @@
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
-import type { ImportRequest } from "@integration-scout/types";
+import type { ImportRequest } from "@scout/types";
 import { env } from "./env.js";
 
 export const connection = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });

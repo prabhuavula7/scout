@@ -1,0 +1,9 @@
+{
+  "slug": "cloudflare-images",
+  "name": "Cloudflare Images",
+  "category": "dam",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "bearer_token",
+  "description": "Image storage, resizing, and delivery."
+}

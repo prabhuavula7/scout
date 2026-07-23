@@ -13,7 +13,8 @@ export const ImportSourceKind = z.enum([
 export type ImportSourceKind = z.infer<typeof ImportSourceKind>;
 
 export const ImportRequest = z.object({
-  projectId: z.string().uuid(),
+  /** Only meaningful in the dormant hosted mode (apps/api), where platforms belong to a project. */
+  projectId: z.string().uuid().optional(),
   connectorSlug: z.string().min(1).optional(),
   kind: ImportSourceKind,
   value: z.string().min(1).describe("URL, raw spec text, or repo slug depending on kind"),

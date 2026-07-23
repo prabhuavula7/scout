@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { createDb, schema } from "@integration-scout/db";
+import { createDb, schema } from "@scout/db";
 
 export async function understandingRoutes(app: FastifyInstance) {
   const db = createDb();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Endpoint } from "@integration-scout/types";
+import type { Endpoint } from "@scout/types";
 import { generateCurl, generatePython, generateTypeScript } from "@/lib/codegen";
 
 const METHOD_COLORS: Record<Endpoint["method"], string> = {

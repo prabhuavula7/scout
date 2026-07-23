@@ -1,0 +1,9 @@
+{
+  "slug": "hubspot",
+  "name": "HubSpot",
+  "category": "crm",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "bearer_token",
+  "description": "CRM, marketing, and CMS platform."
+}

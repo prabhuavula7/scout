@@ -1,15 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { createDb, schema } from "@integration-scout/db";
-import { ImportRequest } from "@integration-scout/types";
-import { CONNECTOR_REGISTRY } from "@integration-scout/connectors";
+import { createDb, schema } from "@scout/db";
+import { ImportRequest } from "@scout/types";
+import { loadConnectorRegistry } from "@scout/connectors";
 import { importQueue } from "../queue.js";
 
 export async function platformRoutes(app: FastifyInstance) {
   const db = createDb();
 
-  app.get("/connectors", async () => CONNECTOR_REGISTRY);
+  app.get("/connectors", async () => loadConnectorRegistry());
 
   app.get("/projects/:projectId/platforms", async (request, reply) => {
     const { projectId } = z.object({ projectId: z.string().uuid() }).parse(request.params);

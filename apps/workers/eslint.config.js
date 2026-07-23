@@ -1,3 +1,3 @@
-import baseConfig from "@integration-scout/eslint-config";
+import baseConfig from "@scout/eslint-config";
 
 export default baseConfig;

@@ -1,0 +1,9 @@
+{
+  "slug": "sharepoint",
+  "name": "SharePoint",
+  "category": "storage",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "oauth2",
+  "description": "Enterprise document management."
+}

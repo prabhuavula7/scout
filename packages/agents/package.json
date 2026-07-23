@@ -1,5 +1,5 @@
 {
-  "name": "@integration-scout/agents",
+  "name": "@scout/agents",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,19 +13,18 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@integration-scout/ai": "workspace:*",
-    "@integration-scout/connectors": "workspace:*",
-    "@integration-scout/db": "workspace:*",
-    "@integration-scout/rag": "workspace:*",
-    "@integration-scout/types": "workspace:*",
+    "@scout/ai": "workspace:*",
+    "@scout/connectors": "workspace:*",
+    "@scout/rag": "workspace:*",
+    "@scout/store": "workspace:*",
+    "@scout/types": "workspace:*",
     "cheerio": "^1.0.0",
-    "drizzle-orm": "^0.38.3",
     "turndown": "^7.2.0",
     "yaml": "^2.7.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@integration-scout/typescript-config": "workspace:*",
+    "@scout/typescript-config": "workspace:*",
     "@types/turndown": "^5.0.5",
     "typescript": "^5.7.2",
     "@types/node": "^22.10.5",

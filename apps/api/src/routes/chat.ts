@@ -1,12 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
-import { createDb, schema } from "@integration-scout/db";
-import { getLLMProvider } from "@integration-scout/ai";
-import { runChatAgent } from "@integration-scout/agents";
-import { ChatRequest } from "@integration-scout/types";
+import { createDb, schema, DrizzleAgentStore } from "@scout/db";
+import { getLLMProvider } from "@scout/ai";
+import { runChatAgent } from "@scout/agents";
+import { ChatRequest } from "@scout/types";
 
 export async function chatRoutes(app: FastifyInstance) {
   const db = createDb();
+  const store = new DrizzleAgentStore(db);
 
   app.get("/platforms/:id/chat/messages", async (request) => {
     const { id } = request.params as { id: string };
@@ -32,7 +33,7 @@ export async function chatRoutes(app: FastifyInstance) {
         citations: [],
       });
 
-      const result = await runChatAgent(db, getLLMProvider(), body.platformId, body.message, body.history);
+      const result = await runChatAgent(store, getLLMProvider(), body.platformId, body.message, body.history);
 
       const [saved] = await db
         .insert(schema.chatMessages)

@@ -1,5 +1,5 @@
 {
-  "name": "@integration-scout/eslint-config",
+  "name": "@scout/eslint-config",
   "version": "0.0.0",
   "private": true,
   "type": "module",

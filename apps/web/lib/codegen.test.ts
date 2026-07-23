@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Endpoint } from "@integration-scout/types";
+import type { Endpoint } from "@scout/types";
 import { generateCurl, generatePython, generateTypeScript } from "./codegen";
 
 const ENDPOINT: Endpoint = {

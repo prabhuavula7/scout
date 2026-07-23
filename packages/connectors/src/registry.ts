@@ -1,3 +1,8 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { connectorsOverrideDir } from "@scout/store";
+
 export type ConnectorCategory =
   | "cms"
   | "dam"
@@ -11,49 +16,61 @@ export interface ConnectorDefinition {
   slug: string;
   name: string;
   category: ConnectorCategory;
-  /** Whether IntegrationScout has a working import/crawl path wired up for this connector. */
+  /** Whether the generic OpenAPI/docs pipeline has been verified end-to-end against this platform. */
   implemented: boolean;
-  /** Suggested docs entry point to speed up the Import flow. Left null when we're not confident of a stable URL. */
+  /** Suggested docs entry point to speed up the import flow. Left null when we're not confident of a stable URL. */
   suggestedDocsUrl: string | null;
   defaultAuthScheme: "api_key_header" | "bearer_token" | "oauth2" | "basic" | "none";
   description: string;
 }
 
-/**
- * Seed registry of enterprise platforms relevant to a CMS/DAM-centric
- * integration practice. Contentful and Bynder are fully implemented
- * reference connectors; the rest are declared so the picker reflects the
- * real target landscape, but they are NOT wired up yet (see ROADMAP.md).
- */
-export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
-  {
-    slug: "contentful",
-    name: "Contentful",
-    category: "cms",
-    implemented: true,
-    suggestedDocsUrl: "https://www.contentful.com/developers/docs/",
-    defaultAuthScheme: "bearer_token",
-    description: "Headless CMS. Content Delivery, Management, and Preview APIs.",
-  },
-  { slug: "sanity", name: "Sanity", category: "cms", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "bearer_token", description: "Headless CMS with GROQ query language." },
-  { slug: "wordpress", name: "WordPress", category: "cms", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "basic", description: "WordPress REST API." },
-  { slug: "aem", name: "Adobe Experience Manager", category: "cms", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "oauth2", description: "Enterprise CMS and DXP." },
-  { slug: "bynder", name: "Bynder", category: "dam", implemented: true, suggestedDocsUrl: "https://developers.bynder.com/", defaultAuthScheme: "oauth2", description: "Digital asset management platform." },
-  { slug: "cloudinary", name: "Cloudinary", category: "dam", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "api_key_header", description: "Media management and optimization." },
-  { slug: "cloudflare-images", name: "Cloudflare Images", category: "dam", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "bearer_token", description: "Image storage, resizing, and delivery." },
-  { slug: "jira", name: "Jira", category: "workflow", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "oauth2", description: "Issue tracking and project workflow." },
-  { slug: "asana", name: "Asana", category: "workflow", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "bearer_token", description: "Work management platform." },
-  { slug: "monday", name: "Monday.com", category: "workflow", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "bearer_token", description: "Work OS / project workflows." },
-  { slug: "notion", name: "Notion", category: "knowledge", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "bearer_token", description: "Docs, wikis, and databases." },
-  { slug: "confluence", name: "Confluence", category: "knowledge", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "oauth2", description: "Team knowledge base and wiki." },
-  { slug: "google-drive", name: "Google Drive", category: "storage", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "oauth2", description: "File storage and collaboration." },
-  { slug: "sharepoint", name: "SharePoint", category: "storage", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "oauth2", description: "Enterprise document management." },
-  { slug: "dropbox", name: "Dropbox", category: "storage", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "oauth2", description: "Cloud file storage." },
-  { slug: "hubspot", name: "HubSpot", category: "crm", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "bearer_token", description: "CRM, marketing, and CMS platform." },
-  { slug: "salesforce", name: "Salesforce", category: "crm", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "oauth2", description: "Enterprise CRM platform." },
-  { slug: "slack", name: "Slack", category: "communication", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "oauth2", description: "Team messaging and workflow automation." },
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+
+// Two candidate locations for the bundled registry: running from source
+// (packages/connectors/src/registry.ts -> ../registry) or from a bundled CLI
+// build, where this module gets inlined into dist/index.js and the JSON
+// files are copied alongside it into dist/registry (see cli/tsup.config.ts).
+const BUNDLED_REGISTRY_CANDIDATES = [
+  path.join(moduleDir, "..", "registry"),
+  path.join(moduleDir, "registry"),
 ];
 
+function readConnectorFiles(dir: string): ConnectorDefinition[] {
+  let entries: string[];
+  try {
+    entries = readdirSync(dir).filter((f) => f.endsWith(".json"));
+  } catch {
+    return [];
+  }
+  return entries.map((file) => JSON.parse(readFileSync(path.join(dir, file), "utf-8")) as ConnectorDefinition);
+}
+
+function readBundledConnectors(): ConnectorDefinition[] {
+  for (const dir of BUNDLED_REGISTRY_CANDIDATES) {
+    const found = readConnectorFiles(dir);
+    if (found.length > 0) return found;
+  }
+  return [];
+}
+
+/**
+ * Connectors are config, not code: adding a platform is a JSON file, not a
+ * source change. Bundled connectors ship in packages/connectors/registry/
+ * (committed to the repo, e.g. Contentful, Bynder); anyone can add their own
+ * or override a bundled one via `~/.scout/connectors/*.json` (same shape,
+ * see `scout connectors add`), which takes precedence by slug.
+ */
+export function loadConnectorRegistry(): ConnectorDefinition[] {
+  const bundled = readBundledConnectors();
+  const userDefined = readConnectorFiles(connectorsOverrideDir());
+
+  const bySlug = new Map<string, ConnectorDefinition>();
+  for (const connector of bundled) bySlug.set(connector.slug, connector);
+  for (const connector of userDefined) bySlug.set(connector.slug, connector);
+
+  return [...bySlug.values()];
+}
+
 export function getConnector(slug: string): ConnectorDefinition | undefined {
-  return CONNECTOR_REGISTRY.find((c) => c.slug === slug);
+  return loadConnectorRegistry().find((c) => c.slug === slug);
 }

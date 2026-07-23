@@ -1,5 +1,5 @@
 {
-  "name": "@integration-scout/types",
+  "name": "@scout/types",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@integration-scout/typescript-config": "workspace:*",
+    "@scout/typescript-config": "workspace:*",
     "typescript": "^5.7.2",
     "@types/node": "^22.10.5"
   }

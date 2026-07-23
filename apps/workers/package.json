@@ -1,5 +1,5 @@
 {
-  "name": "@integration-scout/workers",
+  "name": "@scout/workers",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,16 +11,16 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@integration-scout/agents": "workspace:*",
-    "@integration-scout/db": "workspace:*",
-    "@integration-scout/types": "workspace:*",
+    "@scout/agents": "workspace:*",
+    "@scout/db": "workspace:*",
+    "@scout/types": "workspace:*",
     "bullmq": "^5.34.6",
     "ioredis": "^5.4.2",
     "pino": "^9.6.0"
   },
   "devDependencies": {
-    "@integration-scout/eslint-config": "workspace:*",
-    "@integration-scout/typescript-config": "workspace:*",
+    "@scout/eslint-config": "workspace:*",
+    "@scout/typescript-config": "workspace:*",
     "@types/node": "^22.10.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"

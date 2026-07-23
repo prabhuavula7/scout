@@ -1,0 +1,9 @@
+{
+  "slug": "asana",
+  "name": "Asana",
+  "category": "workflow",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "bearer_token",
+  "description": "Work management platform."
+}

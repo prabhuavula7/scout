@@ -1,20 +1,22 @@
 {
-  "name": "integration-scout",
+  "name": "scout",
   "private": true,
   "packageManager": "pnpm@10.29.3",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
-    "test": "turbo run test",
-    "typecheck": "turbo run typecheck",
-    "db:migrate": "pnpm --filter @integration-scout/db run migrate",
-    "db:generate": "pnpm --filter @integration-scout/db run generate",
-    "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "dev": "turbo run dev --filter=!./apps/api --filter=!./apps/workers",
+    "build": "turbo run build --filter=!./apps/api --filter=!./apps/workers",
+    "lint": "turbo run lint --filter=!./apps/api --filter=!./apps/workers",
+    "test": "turbo run test --filter=!./apps/api --filter=!./apps/workers",
+    "typecheck": "turbo run typecheck --filter=!./apps/api --filter=!./apps/workers",
+    "hosted:dev": "turbo run dev --filter=./apps/api --filter=./apps/workers",
+    "hosted:build": "turbo run build --filter=./apps/api --filter=./apps/workers",
+    "hosted:docker:up": "docker compose -f apps/api/docker-compose.yml up -d",
+    "hosted:docker:down": "docker compose -f apps/api/docker-compose.yml down",
+    "hosted:db:migrate": "pnpm --filter @scout/db run migrate",
+    "hosted:db:generate": "pnpm --filter @scout/db run generate"
   },
   "devDependencies": {
     "eslint": "^9.17.0",

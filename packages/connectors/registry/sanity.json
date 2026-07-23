@@ -1,0 +1,9 @@
+{
+  "slug": "sanity",
+  "name": "Sanity",
+  "category": "cms",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "bearer_token",
+  "description": "Headless CMS with GROQ query language."
+}

@@ -1,5 +1,5 @@
 {
-  "name": "@integration-scout/connectors",
+  "name": "@scout/connectors",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,14 +9,17 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@integration-scout/types": "workspace:*"
+    "@scout/store": "workspace:*",
+    "@scout/types": "workspace:*"
   },
   "devDependencies": {
-    "@integration-scout/typescript-config": "workspace:*",
+    "@scout/typescript-config": "workspace:*",
     "typescript": "^5.7.2",
-    "@types/node": "^22.10.5"
+    "@types/node": "^22.10.5",
+    "vitest": "^2.1.8"
   }
 }

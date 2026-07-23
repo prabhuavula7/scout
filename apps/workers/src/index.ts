@@ -1,9 +1,9 @@
 import { Worker } from "bullmq";
 import { Redis } from "ioredis";
 import pino from "pino";
-import { createDb } from "@integration-scout/db";
-import { runCoordinator } from "@integration-scout/agents";
-import type { ImportRequest } from "@integration-scout/types";
+import { createDb, DrizzleAgentStore } from "@scout/db";
+import { runCoordinator } from "@scout/agents";
+import type { ImportRequest } from "@scout/types";
 
 const logger = pino({ transport: { target: "pino-pretty" } });
 
@@ -17,13 +17,13 @@ interface ImportPipelineJob {
   docUrls: string[];
 }
 
-const db = createDb();
+const store = new DrizzleAgentStore(createDb());
 
 const worker = new Worker<ImportPipelineJob>(
   "import-pipeline",
   async (job) => {
     logger.info({ jobId: job.id, platformId: job.data.platformId }, "Starting import pipeline");
-    await runCoordinator(db, job.data.platformId, job.data.request, job.data.docUrls);
+    await runCoordinator(store, job.data.platformId, job.data.request, job.data.docUrls);
     logger.info({ jobId: job.id, platformId: job.data.platformId }, "Import pipeline complete");
   },
   { connection, concurrency: 2 },

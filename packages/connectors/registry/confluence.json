@@ -1,0 +1,9 @@
+{
+  "slug": "confluence",
+  "name": "Confluence",
+  "category": "knowledge",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "oauth2",
+  "description": "Team knowledge base and wiki."
+}

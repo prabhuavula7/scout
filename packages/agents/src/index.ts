@@ -4,3 +4,4 @@ export * from "./documentation-agent.js";
 export * from "./understanding-agent.js";
 export * from "./chat-agent.js";
 export * from "./coordinator.js";
+export * from "./research-agent.js";

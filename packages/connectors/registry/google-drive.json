@@ -1,0 +1,9 @@
+{
+  "slug": "google-drive",
+  "name": "Google Drive",
+  "category": "storage",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "oauth2",
+  "description": "File storage and collaboration."
+}

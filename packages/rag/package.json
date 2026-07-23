@@ -1,5 +1,5 @@
 {
-  "name": "@integration-scout/rag",
+  "name": "@scout/rag",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,13 +13,13 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@integration-scout/ai": "workspace:*",
-    "@integration-scout/db": "workspace:*",
-    "@integration-scout/types": "workspace:*",
+    "@scout/ai": "workspace:*",
+    "@scout/store": "workspace:*",
+    "@scout/types": "workspace:*",
     "gpt-tokenizer": "^2.8.1"
   },
   "devDependencies": {
-    "@integration-scout/typescript-config": "workspace:*",
+    "@scout/typescript-config": "workspace:*",
     "typescript": "^5.7.2",
     "@types/node": "^22.10.5",
     "vitest": "^2.1.8"

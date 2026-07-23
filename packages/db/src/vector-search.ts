@@ -1,19 +1,8 @@
 import { sql } from "drizzle-orm";
+import type { HybridSearchResult } from "@scout/store";
 import type { Database } from "./client.js";
 
-export interface HybridSearchResult {
-  id: string;
-  platformId: string;
-  content: string;
-  metadata: {
-    sourceUrl: string;
-    sourceTitle: string;
-    section: string | null;
-    topic: string;
-  };
-  tokenCount: number;
-  score: number;
-}
+export type { HybridSearchResult };
 
 /**
  * Hybrid retrieval: blends pgvector cosine similarity with Postgres full-text

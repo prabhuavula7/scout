@@ -1,5 +1,5 @@
-import type { Citation } from "@integration-scout/types";
-import type { HybridSearchResult } from "@integration-scout/db";
+import type { Citation } from "@scout/types";
+import type { HybridSearchResult } from "@scout/store";
 
 /**
  * Builds a numbered context block for the LLM prompt and the matching

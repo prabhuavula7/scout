@@ -1,0 +1,57 @@
+{
+  "name": "scoutcli",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Understand any enterprise platform in minutes. Point Scout at an OpenAPI spec and docs, get an integration blueprint and a grounded chat assistant, all local.",
+  "license": "MIT",
+  "author": "Prabhu Avula",
+  "homepage": "https://github.com/prabhuavula7/scout",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prabhuavula7/scout.git",
+    "directory": "packages/cli"
+  },
+  "bugs": "https://github.com/prabhuavula7/scout/issues",
+  "keywords": ["cli", "openapi", "swagger", "api", "integration", "documentation", "llm", "mcp"],
+  "type": "module",
+  "bin": {
+    "scout": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "@scout/agents": "workspace:*",
+    "@scout/ai": "workspace:*",
+    "@scout/connectors": "workspace:*",
+    "@scout/store": "workspace:*",
+    "@scout/types": "workspace:*",
+    "cheerio": "^1.0.0",
+    "commander": "^13.1.0",
+    "gpt-tokenizer": "^2.8.1",
+    "minisearch": "^7.1.1",
+    "openai": "^4.77.0",
+    "ora": "^8.1.1",
+    "turndown": "^7.2.0",
+    "yaml": "^2.7.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@scout/typescript-config": "workspace:*",
+    "@types/node": "^22.10.5",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

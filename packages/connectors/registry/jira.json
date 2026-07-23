@@ -1,0 +1,9 @@
+{
+  "slug": "jira",
+  "name": "Jira",
+  "category": "workflow",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "oauth2",
+  "description": "Issue tracking and project workflow."
+}

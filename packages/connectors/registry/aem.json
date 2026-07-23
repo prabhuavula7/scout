@@ -1,0 +1,9 @@
+{
+  "slug": "aem",
+  "name": "Adobe Experience Manager",
+  "category": "cms",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "oauth2",
+  "description": "Enterprise CMS and DXP."
+}

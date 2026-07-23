@@ -1,4 +1,4 @@
-import type { Endpoint } from "@integration-scout/types";
+import type { Endpoint } from "@scout/types";
 
 function fillPath(path: string, parameters: Endpoint["parameters"]): string {
   return parameters

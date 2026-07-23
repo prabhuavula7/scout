@@ -1,0 +1,9 @@
+{
+  "slug": "slack",
+  "name": "Slack",
+  "category": "communication",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "oauth2",
+  "description": "Team messaging and workflow automation."
+}

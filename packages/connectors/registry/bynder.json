@@ -1,0 +1,9 @@
+{
+  "slug": "bynder",
+  "name": "Bynder",
+  "category": "dam",
+  "implemented": true,
+  "suggestedDocsUrl": "https://developers.bynder.com/",
+  "defaultAuthScheme": "oauth2",
+  "description": "Digital asset management platform."
+}

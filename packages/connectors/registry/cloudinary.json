@@ -1,0 +1,9 @@
+{
+  "slug": "cloudinary",
+  "name": "Cloudinary",
+  "category": "dam",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "api_key_header",
+  "description": "Media management and optimization."
+}

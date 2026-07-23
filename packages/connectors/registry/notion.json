@@ -1,0 +1,9 @@
+{
+  "slug": "notion",
+  "name": "Notion",
+  "category": "knowledge",
+  "implemented": false,
+  "suggestedDocsUrl": null,
+  "defaultAuthScheme": "bearer_token",
+  "description": "Docs, wikis, and databases."
+}

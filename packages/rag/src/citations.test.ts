@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildContextAndCitations } from "./citations.js";
-import type { HybridSearchResult } from "@integration-scout/db";
+import type { HybridSearchResult } from "@scout/store";
 
 function makeResult(overrides: Partial<HybridSearchResult> = {}): HybridSearchResult {
   return {

@@ -1,69 +1,29 @@
 # Roadmap
 
-Integration Scout ships with two connectors fully wired end-to-end
-(**Contentful** and **Bynder**, via user-supplied OpenAPI/Swagger source +
-docs URLs) so the core loop (import, crawl, understand, chat) is real, not
-mocked. This file tracks what's intentionally not built yet, so it's never
-confused with something that silently doesn't work.
+## Done
 
-## Implemented
+- Core pipeline: import (OpenAPI/Swagger URL or raw text), documentation crawling + chunking + embedding, understanding synthesis, grounded chat with citations.
+- Local-first architecture: `packages/store`'s `LocalFileStore` persists everything under `~/.scout/runs/`, no database or server required for the default path.
+- `scout` CLI: `understand`, `list`, `chat`, `export`, `watch`, `research`, `serve`, `connectors`, `config`.
+- Local web viewer (`scout serve`), bound to `127.0.0.1`, no login, reading the same run directories live.
+- Connectors as JSON config (`packages/connectors/registry/*.json` + `~/.scout/connectors/` overrides), not code.
+- `scout watch`: polls doc URLs, hashes content, re-runs documentation + understanding agents on change, archives the previous snapshot to `history/`.
+- `scout research`: related articles/tutorials/use cases via Tavily search, surfaced in the viewer and `scout export`.
+- `scout mcp`: MCP server exposing `understand_platform` / `ask_platform` / `list_platforms` for Claude Code, Codex, Gemini CLI, and other MCP-speaking agents.
+- Dormant hosted mode (`apps/api` + `apps/workers`, Fastify + Clerk + Postgres/pgvector + BullMQ/Redis) kept working but excluded from the default build/dev/test pipeline, for anyone who wants a multi-user hosted deployment later.
 
-- Import: OpenAPI URL, raw OpenAPI/Swagger JSON or YAML
-- Documentation Intelligence: fetch → HTML-to-markdown → semantic chunking →
-  embeddings → pgvector storage
-- API Explorer: grouped endpoints, parameters, generated cURL/TypeScript/Python
-- AI Understanding: summary, architecture, auth flow, data model, entity
-  relationships, workflows, pitfalls, missing docs, security notes, Mermaid
-  diagrams, all grounded in the imported spec + crawled docs
-- AI Chat: hybrid (vector + full-text) retrieval, citation-grounded answers
-- Agent framework: retry with backoff, `agent_runs` audit trail per step
-- Connector registry: 18 target platforms declared (CMS/DAM/workflow/
-  knowledge/storage/CRM/communication), 2 implemented
+## Not yet implemented
 
-## Not yet implemented (by design, not oversight)
+- **npm publish**: `packages/cli` isn't published to npm yet (`npm install -g scoutcli` in the README is aspirational until then). The bundled connector JSON files and, longer term, a prebuilt local viewer need to ship inside the published package rather than assuming a monorepo checkout (`scout serve` currently spawns `apps/web`'s `next start` from a relative monorepo path).
+- **More connectors**: 18 are declared in `packages/connectors/registry/`, only Contentful and Bynder have been run end-to-end. Adding one is now a JSON-only PR; see `CONTRIBUTING.md`.
+- **More import kinds**: GraphQL introspection, GitHub repo spec discovery, Postman collections, HAR files. `packages/agents/import-agent.ts` only handles OpenAPI/Swagger URL and raw text today.
+- **Local vector search upgrade path**: `packages/store`'s hybrid search is brute-force in-memory cosine similarity + keyword blend, fine at CLI/single-platform scale. `sqlite-vec` is a documented drop-in if chunk counts get large.
+- **Recursive documentation crawling**: currently crawls exactly the URLs passed via `--docs`, no automatic link-following within a docs site.
+- **Fresh screenshots**: the old web-app UI's screenshots are gone from the README since the CLI pivot; the local viewer and terminal output haven't been re-captured yet.
+- **Fuller test coverage**: `packages/store`, `packages/cli`, and `packages/connectors` have unit tests for the core logic, but no end-to-end test harness beyond manual runs against real specs.
 
-- **Additional import kinds**: GraphQL introspection, GitHub repo spec
-  discovery, Postman collection, HAR file. The `ImportRequest` type and
-  `ImportResult` shape already support them; `import-agent.ts` throws a clear
-  "not implemented" error rather than faking output.
-- **Schema Mapper**: source→destination field/type/enum mapping with
-  confidence scores, now unblocked since Contentful and Bynder are both
-  ready platforms to map between.
-- **SDK Generator**: full generated SDK packages (retry logic, pagination
-  helpers, typed clients) beyond the inline code samples in the Explorer.
-- **Integration Planner**: natural-language "sync X with Y" → architecture +
-  sequence diagram + failure handling. Depends on Schema Mapper.
-- **Additional connectors**: Sanity, WordPress, AEM, Cloudinary,
-  Cloudflare Images, Jira, Asana, Monday, Notion, Confluence, Google Drive,
-  SharePoint, Dropbox, HubSpot, Salesforce, Slack: declared in
-  `packages/connectors/src/registry.ts` with `implemented: false`.
-- **Export** (Markdown/PDF/JSON/ZIP) of the generated blueprint.
-- **Recursive documentation crawling**: today the Documentation Agent
-  crawls an explicit list of URLs; a real spider needs scope rules, rate
-  limiting, and sitemap discovery to be safe to run against arbitrary docs
-  sites.
-- **Command palette, keyboard shortcuts, activity feed, search/favorites
-  polish** on the workspace shell.
-- **Vitest/Playwright suites**: not yet written for this milestone's code.
+## Suggested build order for contributors
 
-## Suggested build order
-
-Ordered around the highest-value scenario for someone evaluating this as a
-content-ops / martech orchestration platform: two content systems (a CMS and
-a DAM) that a real marketing org would actually need synchronized, not an
-arbitrary pair of connectors.
-
-1. ~~Wire up Bynder (DAM) as the second connector.~~ Done. Proves the
-   registry pattern generalizes beyond one platform, and pairs with
-   Contentful for a realistic "keep assets and content in sync" scenario
-   rather than two unrelated systems.
-2. Schema Mapper (Contentful ⇄ Bynder field/asset-reference mapping with
-   confidence scores): the reusable "adapter/configuration layer" piece.
-   This is what actually generalizes to onboarding the next customer's stack,
-   not just this one pair of platforms.
-3. Integration Planner ("keep Contentful entries in sync with Bynder asset
-   updates" → architecture + sequence diagram + failure handling): the
-   direct payoff of Schema Mapper, turning a mapped schema into an actual
-   sync strategy a team could implement.
-4. SDK Generator as a standalone package producing a downloadable client.
-5. Export pipeline (Markdown/PDF) over the Understanding + Planner output.
+1. Pick an unimplemented connector from `packages/connectors/registry/`, run `scout understand` against its real spec + docs, and flip `implemented` to `true` once it works cleanly.
+2. Add a new import kind to `packages/agents/import-agent.ts` (Postman collections are probably the easiest next one, same endpoint-shape output).
+3. Publish `scoutcli` to npm (`packages/cli`), solving the "bundled data alongside a real npm install" problem for both the connector registry and, eventually, a prebuilt viewer.
