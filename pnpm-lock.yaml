@@ -277,21 +277,6 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.11.0
         version: 1.29.0(zod@3.25.76)
-      '@scout/agents':
-        specifier: workspace:*
-        version: link:../agents
-      '@scout/ai':
-        specifier: workspace:*
-        version: link:../ai
-      '@scout/connectors':
-        specifier: workspace:*
-        version: link:../connectors
-      '@scout/store':
-        specifier: workspace:*
-        version: link:../store
-      '@scout/types':
-        specifier: workspace:*
-        version: link:../types
       cheerio:
         specifier: ^1.0.0
         version: 1.2.0
@@ -320,6 +305,21 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
     devDependencies:
+      '@scout/agents':
+        specifier: workspace:*
+        version: link:../agents
+      '@scout/ai':
+        specifier: workspace:*
+        version: link:../ai
+      '@scout/connectors':
+        specifier: workspace:*
+        version: link:../connectors
+      '@scout/store':
+        specifier: workspace:*
+        version: link:../store
+      '@scout/types':
+        specifier: workspace:*
+        version: link:../types
       '@scout/typescript-config':
         specifier: workspace:*
         version: link:../config/typescript-config

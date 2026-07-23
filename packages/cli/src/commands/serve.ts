@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
@@ -24,7 +25,23 @@ export function registerServeCommand(program: Command): void {
       await applyConfigToEnv();
 
       const webAppDir = resolveWebAppDir();
+      if (!existsSync(webAppDir)) {
+        console.error(
+          "scout serve isn't available in this install yet: it currently only runs from a full monorepo checkout " +
+            "(the local viewer isn't bundled into the published npm package yet). Use `scout chat <slug>` or " +
+            "`scout export <slug>` instead, or clone the repo and run `pnpm --filter scoutcli dev -- serve`. " +
+            "Tracked in ROADMAP.md.",
+        );
+        process.exitCode = 1;
+        return;
+      }
+
       const nextBin = path.join(webAppDir, "node_modules", ".bin", process.platform === "win32" ? "next.cmd" : "next");
+      if (!existsSync(nextBin)) {
+        console.error(`Found ${webAppDir} but it isn't built yet. Run \`pnpm build\` from the repo root first.`);
+        process.exitCode = 1;
+        return;
+      }
       const child = spawn(nextBin, ["start", "-H", "127.0.0.1", "-p", options.port], {
         cwd: webAppDir,
         stdio: "inherit",

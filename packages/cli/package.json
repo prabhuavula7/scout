@@ -31,11 +31,6 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.11.0",
-    "@scout/agents": "workspace:*",
-    "@scout/ai": "workspace:*",
-    "@scout/connectors": "workspace:*",
-    "@scout/store": "workspace:*",
-    "@scout/types": "workspace:*",
     "cheerio": "^1.0.0",
     "commander": "^13.1.0",
     "gpt-tokenizer": "^2.8.1",
@@ -47,6 +42,11 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@scout/agents": "workspace:*",
+    "@scout/ai": "workspace:*",
+    "@scout/connectors": "workspace:*",
+    "@scout/store": "workspace:*",
+    "@scout/types": "workspace:*",
     "@scout/typescript-config": "workspace:*",
     "@types/node": "^22.10.5",
     "tsup": "^8.3.5",
