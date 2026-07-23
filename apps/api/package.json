@@ -1,0 +1,38 @@
+{
+  "name": "@integration-scout/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=../../.env src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file=../../.env dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@clerk/backend": "^1.21.4",
+    "@fastify/cors": "^10.0.2",
+    "@integration-scout/agents": "workspace:*",
+    "@integration-scout/ai": "workspace:*",
+    "@integration-scout/connectors": "workspace:*",
+    "@integration-scout/db": "workspace:*",
+    "@integration-scout/rag": "workspace:*",
+    "@integration-scout/types": "workspace:*",
+    "bullmq": "^5.34.6",
+    "drizzle-orm": "^0.38.3",
+    "fastify": "^5.2.0",
+    "fastify-plugin": "^5.0.1",
+    "fastify-type-provider-zod": "^4.0.2",
+    "ioredis": "^5.4.2",
+    "pino-pretty": "^13.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@integration-scout/eslint-config": "workspace:*",
+    "@integration-scout/typescript-config": "workspace:*",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

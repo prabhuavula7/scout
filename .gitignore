@@ -1,0 +1,15 @@
+node_modules/
+.turbo/
+dist/
+.next/
+out/
+build/
+.env
+.env.local
+*.log
+*.tsbuildinfo
+.DS_Store
+coverage/
+.vercel/
+pnpm-lock.yaml.bak
+.gstack/
