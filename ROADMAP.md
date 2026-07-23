@@ -1,10 +1,10 @@
 # Roadmap
 
-Integration Scout ships with one connector fully wired end-to-end
-(**Contentful**, via user-supplied OpenAPI/Swagger source + docs URLs) so the
-core loop (import, crawl, understand, chat) is real, not mocked. This
-file tracks what's intentionally not built yet, so it's never confused with
-something that silently doesn't work.
+Integration Scout ships with two connectors fully wired end-to-end
+(**Contentful** and **Bynder**, via user-supplied OpenAPI/Swagger source +
+docs URLs) so the core loop (import, crawl, understand, chat) is real, not
+mocked. This file tracks what's intentionally not built yet, so it's never
+confused with something that silently doesn't work.
 
 ## Implemented
 
@@ -18,7 +18,7 @@ something that silently doesn't work.
 - AI Chat: hybrid (vector + full-text) retrieval, citation-grounded answers
 - Agent framework: retry with backoff, `agent_runs` audit trail per step
 - Connector registry: 18 target platforms declared (CMS/DAM/workflow/
-  knowledge/storage/CRM/communication), 1 implemented
+  knowledge/storage/CRM/communication), 2 implemented
 
 ## Not yet implemented (by design, not oversight)
 
@@ -27,13 +27,13 @@ something that silently doesn't work.
   `ImportResult` shape already support them; `import-agent.ts` throws a clear
   "not implemented" error rather than faking output.
 - **Schema Mapper**: source→destination field/type/enum mapping with
-  confidence scores. Needs two ready platforms to map between; the natural
-  next step once a second connector (Bynder) is wired up.
+  confidence scores, now unblocked since Contentful and Bynder are both
+  ready platforms to map between.
 - **SDK Generator**: full generated SDK packages (retry logic, pagination
   helpers, typed clients) beyond the inline code samples in the Explorer.
 - **Integration Planner**: natural-language "sync X with Y" → architecture +
   sequence diagram + failure handling. Depends on Schema Mapper.
-- **Additional connectors**: Sanity, WordPress, AEM, Bynder, Cloudinary,
+- **Additional connectors**: Sanity, WordPress, AEM, Cloudinary,
   Cloudflare Images, Jira, Asana, Monday, Notion, Confluence, Google Drive,
   SharePoint, Dropbox, HubSpot, Salesforce, Slack: declared in
   `packages/connectors/src/registry.ts` with `implemented: false`.
@@ -51,12 +51,12 @@ something that silently doesn't work.
 Ordered around the highest-value scenario for someone evaluating this as a
 content-ops / martech orchestration platform: two content systems (a CMS and
 a DAM) that a real marketing org would actually need synchronized, not an
-arbitrary second connector.
+arbitrary pair of connectors.
 
-1. Wire up Bynder (DAM) as the second connector. Proves the registry
-   pattern generalizes beyond one platform, and pairs with Contentful for a
-   realistic "keep assets and content in sync" scenario rather than two
-   unrelated systems.
+1. ~~Wire up Bynder (DAM) as the second connector.~~ Done. Proves the
+   registry pattern generalizes beyond one platform, and pairs with
+   Contentful for a realistic "keep assets and content in sync" scenario
+   rather than two unrelated systems.
 2. Schema Mapper (Contentful ⇄ Bynder field/asset-reference mapping with
    confidence scores): the reusable "adapter/configuration layer" piece.
    This is what actually generalizes to onboarding the next customer's stack,

@@ -6,6 +6,7 @@ import type {
   Platform,
   PlatformUnderstanding,
   Project,
+  UpdateProjectRequest,
 } from "@integration-scout/types";
 import type { ConnectorDefinition } from "@integration-scout/connectors";
 
@@ -46,6 +47,10 @@ export function createApiClient(token: string | null) {
     createProject: (body: CreateProjectRequest) =>
       request<Project>("/projects", { method: "POST", body: JSON.stringify(body) }, token),
     getProject: (id: string) => request<Project>(`/projects/${id}`, undefined, token),
+    updateProject: (id: string, body: UpdateProjectRequest) =>
+      request<Project>(`/projects/${id}`, { method: "PATCH", body: JSON.stringify(body) }, token),
+    deleteProject: (id: string) =>
+      request<void>(`/projects/${id}`, { method: "DELETE" }, token),
     toggleFavorite: (id: string, isFavorite: boolean) =>
       request<Project>(
         `/projects/${id}/favorite`,

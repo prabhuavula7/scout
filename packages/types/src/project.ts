@@ -16,3 +16,9 @@ export const CreateProjectRequest = z.object({
   description: z.string().max(500).optional(),
 });
 export type CreateProjectRequest = z.infer<typeof CreateProjectRequest>;
+
+export const UpdateProjectRequest = z.object({
+  name: z.string().min(1).max(120).optional(),
+  description: z.string().max(500).nullable().optional(),
+});
+export type UpdateProjectRequest = z.infer<typeof UpdateProjectRequest>;

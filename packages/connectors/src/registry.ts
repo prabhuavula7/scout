@@ -21,9 +21,9 @@ export interface ConnectorDefinition {
 
 /**
  * Seed registry of enterprise platforms relevant to a CMS/DAM-centric
- * integration practice (Contentful is the fully implemented reference
- * connector; the rest are declared so the picker reflects the real target
- * landscape, but they are NOT wired up yet (see ROADMAP.md).
+ * integration practice. Contentful and Bynder are fully implemented
+ * reference connectors; the rest are declared so the picker reflects the
+ * real target landscape, but they are NOT wired up yet (see ROADMAP.md).
  */
 export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
   {
@@ -38,7 +38,7 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
   { slug: "sanity", name: "Sanity", category: "cms", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "bearer_token", description: "Headless CMS with GROQ query language." },
   { slug: "wordpress", name: "WordPress", category: "cms", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "basic", description: "WordPress REST API." },
   { slug: "aem", name: "Adobe Experience Manager", category: "cms", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "oauth2", description: "Enterprise CMS and DXP." },
-  { slug: "bynder", name: "Bynder", category: "dam", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "oauth2", description: "Digital asset management platform." },
+  { slug: "bynder", name: "Bynder", category: "dam", implemented: true, suggestedDocsUrl: "https://developers.bynder.com/", defaultAuthScheme: "oauth2", description: "Digital asset management platform." },
   { slug: "cloudinary", name: "Cloudinary", category: "dam", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "api_key_header", description: "Media management and optimization." },
   { slug: "cloudflare-images", name: "Cloudflare Images", category: "dam", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "bearer_token", description: "Image storage, resizing, and delivery." },
   { slug: "jira", name: "Jira", category: "workflow", implemented: false, suggestedDocsUrl: null, defaultAuthScheme: "oauth2", description: "Issue tracking and project workflow." },

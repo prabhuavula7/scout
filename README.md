@@ -85,9 +85,9 @@ site differently, while OpenAPI is a standard.
   mid-integration and get an answer grounded in the actual crawled docs, with
   a clickable citation to verify it.
 
-This repo implements one connector (**Contentful**) end-to-end as a
-first-class preset. See [ROADMAP.md](./ROADMAP.md) for what's deliberately
-not built yet, and for why Bynder is next.
+This repo implements two connectors (**Contentful** and **Bynder**)
+end-to-end as first-class presets. See [ROADMAP.md](./ROADMAP.md) for what's
+deliberately not built yet.
 
 ## Architecture
 
@@ -106,6 +106,93 @@ packages/
   ui/          Cross-cutting React primitives (StatusBadge, EmptyState, ThemeToggle)
   config/      Shared tsconfig + eslint config
 ```
+
+## Tech stack and why
+
+**Turborepo monorepo, TypeScript everywhere.** One repo, one lint/typecheck/
+test pipeline, and a shared `packages/types` package that's the single
+source of truth for every shape (API requests, database rows, LLM
+structured output). Backend and frontend can never quietly drift apart on
+what a `Platform` or a `ChatMessage` looks like, since they import the exact
+same Zod schema.
+
+**Next.js 15 App Router (`apps/web`).** Server components handle
+auth-gated data fetching and redirects (checking `auth()` before rendering
+the dashboard, for example) without a client-side loading flash. File-based
+routing maps cleanly onto the workspace's tabs (Import, API Explorer,
+Understanding, AI Chat). Deploys to Vercel with no extra configuration.
+
+**Fastify (`apps/api`).** Faster and lighter than Express, with first-class
+TypeScript support and a plugin architecture that made the Clerk
+authentication middleware a clean, isolated `fastify-plugin` rather than
+something threaded through every route by hand.
+
+**Zod, used three ways.** The same schema in `packages/types` validates
+incoming API requests, defines the Drizzle-adjacent TypeScript types, and
+constrains the LLM's structured output (`completeStructured` passes the Zod
+schema straight to OpenAI's API, so the model's response is parsed and
+validated in one step instead of prompted for JSON and hoped for).
+
+**Postgres with pgvector, via Drizzle ORM (`packages/db`).** Embeddings live
+in the same database as the relational data (platforms, endpoints, chat
+history) instead of standing up a separate vector database. Hybrid search
+blends pgvector cosine similarity with Postgres full-text search in one SQL
+query, because pure vector search alone misses exact keyword matches like
+error codes or field names that a user might search for verbatim. Drizzle
+was chosen over a heavier ORM because the schema stays plain SQL-shaped
+TypeScript, not a layer of abstraction to fight when writing that hybrid
+query by hand.
+
+**Redis and BullMQ, in a dedicated `apps/workers` process.** Importing a
+platform (parse spec, crawl docs, embed, generate the blueprint) can take
+longer than an HTTP request should block for, so it runs as a background
+job. The API returns immediately after enqueueing, and the frontend polls
+platform status (`pending` to `importing` to `crawling_docs` to `embedding`
+to `ready`) so progress is visible instead of a spinner with no meaning.
+
+**Clerk for auth**, with an explicit, logged fallback to a single dev user
+when `CLERK_SECRET_KEY` is unset, so the app is runnable end-to-end on a
+fresh clone before anyone has configured real auth.
+
+**A provider-agnostic LLM interface (`packages/ai`), OpenAI as the current
+implementation.** Every agent depends on an `LLMProvider` interface
+(`complete`, `completeStructured`, `streamComplete`, `embed`), never the
+OpenAI SDK directly. Adding Claude, Gemini, or OpenRouter later is one new
+adapter file and an `AI_PROVIDER` env value, not a rewrite of the agents.
+
+**An agent framework with a real audit trail (`packages/agents`).** Every
+agent run (Import, Documentation, Understanding, Chat) goes through
+`withRetry` (exponential backoff, since docs sites and LLM APIs fail
+transiently far more often than local code) and is persisted to an
+`agent_runs` table with status, input, output, error, and attempt count.
+The pipeline is inspectable after the fact instead of a black box.
+
+**TanStack Query and Zustand on the frontend, kept deliberately separate.**
+Server state (projects, platforms, understanding, chat messages) is React
+Query, including polling while an import is in progress. The one piece of
+pure client state, which platform is selected per project, is a small
+Zustand store. Mixing the two would blur what's a cache of server data
+versus what's local UI state.
+
+**Tailwind v4 with CSS-based theme configuration.** Design tokens (fonts,
+the accent color, animation keyframes) live in one `@theme` block in
+`globals.css` rather than a separate `tailwind.config.js`, and dark mode is
+class-based (`@custom-variant dark`) rather than tied only to OS preference,
+so the theme toggle can override it and persist the choice.
+
+**Mermaid for diagrams.** The Understanding Agent generates diagrams as
+Mermaid text, part of its structured Zod output, rendered client-side. The
+diagram is auditable, diffable text, not an opaque generated image.
+
+**Vitest for the test suite.** Chosen specifically because it covers pure
+logic (chunking, citation building, OpenAPI parsing, code generation)
+without needing a live Postgres or Redis instance, so `pnpm test` works with
+zero infrastructure running.
+
+**Docker Compose, not Kubernetes, for local infrastructure.** This project
+stands up exactly two stateful local services (Postgres, Redis). Compose is
+the right-sized tool for that; Kubernetes would be solving a
+production-orchestration problem this repo doesn't have.
 
 ## Walkthrough: importing a platform
 
@@ -236,6 +323,47 @@ real, actively maintained spec.
 6. If none of that turns up anything, use `Raw OpenAPI JSON or YAML` and
    hand-author a partial spec from the prose docs instead.
 
+## Making this your own: adding a connector
+
+This isn't a contribution guide, since it's a solo portfolio project, but the
+registry pattern is deliberately built so wiring up a new target platform
+takes minutes, not a rearchitecture. If you fork this and want to add your
+own platform:
+
+1. Open `packages/connectors/src/registry.ts` and find (or add) an entry in
+   `CONNECTOR_REGISTRY` for the platform. Flip `implemented` to `true` and
+   set `suggestedDocsUrl` to a real, currently reachable docs URL. Check it
+   actually resolves first (`curl -sI <url>`); a redirect chain that ends in
+   a 500 will fail the import at the crawl step, not the registry step, as
+   happened during Bynder's own wiring (their docs subdomain had a live
+   outage while this was being tested, caught by checking the real HTTP
+   response instead of assuming the URL worked).
+2. That's usually the entire change. The import pipeline
+   (`packages/agents/src/import-agent.ts`, `documentation-agent.ts`,
+   `understanding-agent.ts`) is fully generic. It has no platform-specific
+   branches; it only reacts to whatever OpenAPI spec and docs you feed it at
+   import time. The registry entry is a UI preset (autofills the label and
+   docs URL in the Import form), not a code path the agents depend on.
+3. Test it for real, the same way both existing connectors were verified:
+   pick a real, publicly documented API for that platform (or hand-author a
+   small OpenAPI spec covering a handful of its real, documented endpoints
+   if there's no public spec URL), run it through the Import tab, and check
+   that Understanding and AI Chat come back grounded in what you actually
+   gave it rather than invented.
+4. Update `ROADMAP.md`: move the connector from "Not yet implemented" to
+   "Implemented," and adjust the "Suggested build order" if it changes what
+   should come next.
+
+If you want to go further than a registry entry, the places to extend are:
+
+- **A new import kind** (GraphQL introspection, a Postman collection, a HAR
+  file): implement the corresponding branch in `import-agent.ts`, which
+  currently throws a clear "not implemented" error for these rather than
+  faking output.
+- **A different LLM provider**: implement the `LLMProvider` interface in
+  `packages/ai/src/providers/`, then add it to the `getLLMProvider()`
+  factory switch in `packages/ai/src/index.ts` and set `AI_PROVIDER`.
+
 ## Local development
 
 **Prerequisites**: Node 22+, pnpm 10+, Docker.
@@ -283,14 +411,10 @@ pipeline (import, crawl, embed, chat) needs `pnpm docker:up` and
 - Swap local Postgres/Redis for hosted equivalents (Supabase, Upstash) by
   changing `DATABASE_URL`/`REDIS_URL`; no code changes required.
 
-## Why these choices
+## One more design note
 
-- **Provider-agnostic LLM layer** (`packages/ai`): every agent depends on
-  the `LLMProvider` interface, not the OpenAI SDK directly. Adding Claude,
-  Gemini, or OpenRouter is one adapter file plus an `AI_PROVIDER` env value.
-- **Hybrid retrieval** (`packages/db/src/vector-search.ts`): pure vector
-  search misses exact keyword matches like error codes or field names,
-  so it's blended with Postgres full-text search without a second database.
-- **Citations are structural, not prompted**: the chat agent builds its
-  citation list from the exact chunks it retrieved and passed to the model.
-  It can't cite a source it wasn't given.
+Citations in the chat assistant are structural, not prompted. The chat
+agent builds its citation list from the exact chunks it retrieved and
+passed to the model. It can't cite a source it wasn't given, because the
+citation list is built in code from the retrieval results, not asked of the
+model as part of its answer.
