@@ -19,6 +19,7 @@ All notable changes to Scout are documented here. Format loosely follows [Keep a
 - `scout refresh <slug>` (and a "Refresh" / "Recrawl docs" button on every run's page in the web app): regenerates a run's understanding without re-importing the spec. Plain `refresh` re-synthesizes from whatever's already crawled and stored (picks up the raised limits above immediately, no network calls); `--recrawl` also re-fetches the run's doc URLs first (needed when crawl depth/page-cap itself changed). Each run now remembers its own crawl settings so both this and `scout watch` reuse them instead of guessing.
 - A staged progress view on the Understanding page (Import spec → Crawl docs → Understand & synthesize) with a spinner and rotating status phrases, shown while a run is actively in progress instead of an indistinguishable "not generated yet" empty state.
 - Confirmed (already-working, now covered by an explicit concurrency check) that multiple runs can import/crawl/synthesize at the same time: `scout serve`'s run-creation endpoint was already fire-and-forget per request with no shared queue or lock, and each run lives in its own directory, so this was safe by construction rather than newly added.
+- Published to npm as `@dotapk7/scoutcli` (the unscoped `scoutcli` was rejected by npm's anti-typosquatting policy against an existing `scout-cli` package). The `scout` command name is unchanged; only the install line moves to `npm install -g @dotapk7/scoutcli`.
 
 ## [1.0.0] - 2026-07-23
 

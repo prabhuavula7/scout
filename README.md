@@ -8,7 +8,7 @@
 Point Scout at a platform's OpenAPI/Swagger spec and its docs, and it produces a cited integration blueprint (architecture, auth flow, data model, common workflows, pitfalls) plus a grounded chat assistant, all running locally on your machine. No account, no server, no hosting.
 
 ```
-npm install -g scoutcli   # once published; see "Local development" until then
+npm install -g @dotapk7/scoutcli
 
 scout understand https://petstore3.swagger.io/api/v3/openapi.json --docs https://example.com/docs
 scout chat petstore-openapi-3-0
@@ -233,8 +233,8 @@ docker compose exec scout scout list
 ```
 pnpm install
 pnpm build           # builds everything except the dormant hosted mode
-pnpm --filter scoutcli dev -- understand <spec-url>   # run the CLI from source via tsx
-pnpm --filter scoutcli build && node packages/cli/dist/index.js serve
+pnpm --filter @dotapk7/scoutcli dev -- understand <spec-url>   # run the CLI from source via tsx
+pnpm --filter @dotapk7/scoutcli build && node packages/cli/dist/index.js serve
 ```
 
 `pnpm typecheck` / `pnpm lint` / `pnpm test` cover the default (CLI + viewer) path, including `apps/web`'s own test suite (API route handlers + interactive components, via Vitest + React Testing Library); `pnpm hosted:build` / `pnpm hosted:dev` cover the dormant hosted mode.

@@ -12,8 +12,8 @@ pnpm build
 To run the CLI from source while developing:
 
 ```
-pnpm --filter scoutcli dev -- understand <spec-url> --docs <docs-url>
-pnpm --filter scoutcli dev -- serve
+pnpm --filter @dotapk7/scoutcli dev -- understand <spec-url> --docs <docs-url>
+pnpm --filter @dotapk7/scoutcli dev -- serve
 ```
 
 Prefer not to install Node/pnpm locally at all? `docker compose up` builds and runs Scout from source; see the README's "Run with Docker" section. Useful for a quick sanity check that a change didn't break the packaged build, since it goes through the same `pnpm build` + npm-dependency-resolution path `npm publish` would.
