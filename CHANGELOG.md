@@ -4,6 +4,12 @@ All notable changes to Scout are documented here. Format loosely follows [Keep a
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-07-24
+
+### Added
+
+- `packages/cli/README.md` and a copied `LICENSE`: the published package previously had neither, so the npm registry page showed only the one-line description with no quickstart, command reference, or MCP setup snippet visible to someone browsing npmjs.com before installing.
+
 ## [1.1.1] - 2026-07-24
 
 ### Added
