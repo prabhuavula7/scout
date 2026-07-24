@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "tsup";
@@ -43,12 +43,26 @@ export default defineConfig({
     const viewerOut = path.join(here, "dist/viewer");
 
     if (existsSync(webNext)) {
+      // cpSync only overwrites files present in the source; it never deletes
+      // stale files already in the destination. Without this, anything from
+      // a previous local build that's no longer in apps/web/.next (a
+      // rotated trace file, a removed route's output) lingers in dist/viewer
+      // forever and ships in the published tarball.
+      rmSync(viewerOut, { recursive: true, force: true });
+
       // .next/cache is webpack's build cache (hundreds of MB), never read by
       // `next start`; filtering it out is the difference between a
-      // multi-hundred-MB package and one a few MB.
+      // multi-hundred-MB package and one a few MB. .next/trace is Next's own
+      // dev-time telemetry log, also unread by `next start`, but capped at
+      // 2MB and rotated (trace, trace 2, trace 3, ...) rather than
+      // overwritten, so a dev machine with a few builds under its belt can
+      // have several stale copies sitting there; exclude all of them too.
       cpSync(webNext, path.join(viewerOut, ".next"), {
         recursive: true,
-        filter: (src) => !src.includes(`${path.sep}.next${path.sep}cache${path.sep}`) && !src.endsWith(`${path.sep}.next${path.sep}cache`),
+        filter: (src) =>
+          !src.includes(`${path.sep}.next${path.sep}cache${path.sep}`) &&
+          !src.endsWith(`${path.sep}.next${path.sep}cache`) &&
+          !/[/\\]\.next[/\\]trace( \d+)?$/.test(src),
       });
       if (existsSync(webPublic)) cpSync(webPublic, path.join(viewerOut, "public"), { recursive: true });
       mkdirSync(viewerOut, { recursive: true });

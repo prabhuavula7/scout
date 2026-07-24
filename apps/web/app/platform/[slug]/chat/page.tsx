@@ -123,6 +123,11 @@ export default function ChatPage({ params }: { params: Promise<{ slug: string }>
           </div>
         )}
         {sendMessage.isPending && <TypingBubble />}
+        {sendMessage.isError && (
+          <div className="animate-fade-in max-w-lg rounded-2xl rounded-bl-sm border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+            {(sendMessage.error as Error).message}
+          </div>
+        )}
       </div>
 
       <form

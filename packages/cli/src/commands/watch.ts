@@ -1,8 +1,8 @@
 import { Command } from "commander";
-import { runDocumentationAgent, runUnderstandingAgent } from "@scout/agents";
-import { getLLMProvider } from "@scout/ai";
+import { runDocumentationAgent, runUnderstandingAgent, MAX_ENDPOINT_SUMMARIES, MAX_DOC_EXCERPTS } from "@scout/agents";
+import type { LLMProvider } from "@scout/ai";
 import { LocalFileStore } from "@scout/store";
-import { applyConfigToEnv } from "../config.js";
+import { resolveLLMProvider } from "../config.js";
 import { hashContent } from "../hash.js";
 
 async function checkForChanges(docUrls: string[], lastHashes: Record<string, string>): Promise<string[]> {
@@ -20,20 +20,41 @@ async function checkForChanges(docUrls: string[], lastHashes: Record<string, str
   return changed;
 }
 
-async function refresh(store: LocalFileStore, platformId: string, docUrls: string[]): Promise<void> {
-  const llm = getLLMProvider();
+async function refresh(store: LocalFileStore, platformId: string, docUrls: string[], llm: LLMProvider): Promise<void> {
   await store.resetDocChunks();
-  await runDocumentationAgent(store, llm, platformId, docUrls);
+  const docResult = await runDocumentationAgent(store, llm, platformId, docUrls);
+  await store.setDocsCrawlWarning(
+    platformId,
+    docResult.thinPages.length > 0
+      ? `${docResult.thinPages.length} doc page(s) returned little to no extractable content, possibly JavaScript-rendered pages a static fetch can't execute: ${docResult.thinPages.join(", ")}. Grounded answers about those pages may be limited or missing.`
+      : null,
+  );
 
   const endpoints = await store.getEndpoints();
   const platform = await store.getPlatform();
-  const docChunks = await store.getRecentDocChunks(platformId, 40);
+  const endpointSummaries = endpoints.map(
+    (e) => `${e.method} ${e.path}: ${e.summary ?? e.description ?? "no description"}`,
+  );
+  const { chunks: docChunks, totalAvailable: chunksTotal } = store.getRepresentativeDocChunks
+    ? await store.getRepresentativeDocChunks(platformId, MAX_DOC_EXCERPTS)
+    : { chunks: await store.getRecentDocChunks(platformId, MAX_DOC_EXCERPTS), totalAvailable: MAX_DOC_EXCERPTS };
 
   await runUnderstandingAgent(store, llm, platformId, {
     platformName: platform.name,
-    endpointSummaries: endpoints.map((e) => `${e.method} ${e.path}: ${e.summary ?? e.description ?? "no description"}`),
+    endpointSummaries,
     docExcerpts: docChunks.map((c) => c.content),
   });
+
+  const endpointsUsed = Math.min(endpointSummaries.length, MAX_ENDPOINT_SUMMARIES);
+  const parts: string[] = [];
+  if (endpointsUsed < endpointSummaries.length) parts.push(`${endpointsUsed} of ${endpointSummaries.length} endpoints`);
+  if (docChunks.length < chunksTotal) parts.push(`${docChunks.length} of ${chunksTotal} doc chunks`);
+  await store.setUnderstandingScopeWarning?.(
+    platformId,
+    parts.length > 0
+      ? `This analysis used ${parts.join(" and ")} (kept within a bounded size/cost per run). The blueprint below may not reflect the full platform.`
+      : null,
+  );
 }
 
 export function registerWatchCommand(program: Command): void {
@@ -43,7 +64,7 @@ export function registerWatchCommand(program: Command): void {
     .argument("<slug>", "the run slug, see `scout list`")
     .option("--interval <seconds>", "polling interval in seconds", "3600")
     .action(async (slug: string, options: { interval: string }) => {
-      await applyConfigToEnv();
+      const llm = await resolveLLMProvider();
 
       const opened = await LocalFileStore.open(slug);
       if (!opened) {
@@ -71,7 +92,7 @@ export function registerWatchCommand(program: Command): void {
         if (changed.length > 0) {
           console.log(`[${new Date().toISOString()}] Detected changes in: ${changed.join(", ")}. Refreshing...`);
           try {
-            await refresh(store, platformId, docUrls);
+            await refresh(store, platformId, docUrls, llm);
             for (const url of docUrls) {
               const response = await fetch(url);
               if (response.ok) await store.setDocsHash(url, hashContent(await response.text()));

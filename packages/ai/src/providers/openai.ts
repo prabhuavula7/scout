@@ -8,9 +8,9 @@ import type {
 } from "../provider.js";
 
 export interface OpenAIProviderOptions {
-  apiKey?: string;
-  chatModel?: string;
-  embeddingModel?: string;
+  apiKey?: string | undefined;
+  chatModel?: string | undefined;
+  embeddingModel?: string | undefined;
 }
 
 export class OpenAIProvider implements LLMProvider {

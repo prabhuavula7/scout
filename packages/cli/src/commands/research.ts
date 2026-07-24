@@ -2,7 +2,7 @@ import { Command } from "commander";
 import ora from "ora";
 import { runResearchAgent } from "@scout/agents";
 import { LocalFileStore } from "@scout/store";
-import { loadConfig } from "../config.js";
+import { resolveSearchProvider } from "../config.js";
 
 export function registerResearchCommand(program: Command): void {
   program
@@ -18,11 +18,10 @@ export function registerResearchCommand(program: Command): void {
       }
       const { store } = opened;
 
-      const config = await loadConfig();
-      const tavilyApiKey = process.env.TAVILY_API_KEY ?? config.tavilyApiKey;
-      if (!tavilyApiKey) {
+      const searchProvider = await resolveSearchProvider();
+      if (!searchProvider) {
         console.error(
-          "No Tavily API key configured. Get one at tavily.com, then run: scout config set tavily-api-key <key>",
+          "No search provider configured. Get a Tavily or SerpApi key, then run: scout config search add tavily --api-key <key>",
         );
         process.exitCode = 1;
         return;
@@ -31,7 +30,7 @@ export function registerResearchCommand(program: Command): void {
       const platform = await store.getPlatform();
       const spinner = ora(`Searching for resources on ${platform.name}...`).start();
       try {
-        const resources = await runResearchAgent(tavilyApiKey, platform.name);
+        const resources = await runResearchAgent(searchProvider, platform.name);
         await store.saveResources(resources);
         spinner.succeed(`Found ${resources.length} resource(s).`);
         for (const resource of resources) {

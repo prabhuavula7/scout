@@ -1,10 +1,35 @@
 import type { AgentStore } from "@scout/store";
-import { getLLMProvider } from "@scout/ai";
+import type { LLMProvider } from "@scout/ai";
 import type { ImportRequest, PlatformStatus } from "@scout/types";
 import { runAgent } from "./base.js";
 import { runImportAgent } from "./import-agent.js";
-import { runDocumentationAgent } from "./documentation-agent.js";
-import { runUnderstandingAgent } from "./understanding-agent.js";
+import { runDocumentationAgent, type CrawlOptions } from "./documentation-agent.js";
+import { runUnderstandingAgent, MAX_ENDPOINT_SUMMARIES, MAX_DOC_EXCERPTS } from "./understanding-agent.js";
+
+function thinPagesWarning(thinPages: string[]): string | null {
+  if (thinPages.length === 0) return null;
+  return `${thinPages.length} doc page(s) returned little to no extractable content, possibly JavaScript-rendered pages a static fetch can't execute: ${thinPages.join(", ")}. Grounded answers about those pages may be limited or missing.`;
+}
+
+/**
+ * Understanding synthesis is bounded (see MAX_ENDPOINT_SUMMARIES /
+ * MAX_DOC_EXCERPTS): large platforms silently lose the tail of their
+ * endpoint list or doc corpus otherwise. This turns that into a disclosed
+ * fact instead of a silent gap, the same honesty principle the tool
+ * already applies via "missingDocumentation" for the platform's own docs.
+ */
+function scopeWarning(
+  endpointsTotal: number,
+  endpointsUsed: number,
+  chunksTotal: number,
+  chunksUsed: number,
+): string | null {
+  const parts: string[] = [];
+  if (endpointsUsed < endpointsTotal) parts.push(`${endpointsUsed} of ${endpointsTotal} endpoints`);
+  if (chunksUsed < chunksTotal) parts.push(`${chunksUsed} of ${chunksTotal} doc chunks`);
+  if (parts.length === 0) return null;
+  return `This analysis used ${parts.join(" and ")} (kept within a bounded size/cost per run). The blueprint below may not reflect the full platform.`;
+}
 
 /**
  * Coordinator Agent: runs the full pipeline for a newly imported platform
@@ -18,8 +43,9 @@ export async function runCoordinator(
   platformId: string,
   request: ImportRequest,
   docUrls: string[],
+  llm: LLMProvider,
+  crawlOptions?: CrawlOptions,
 ): Promise<void> {
-  const llm = getLLMProvider();
   const setStatus = (status: PlatformStatus) => store.setPlatformStatus(platformId, status);
 
   try {
@@ -41,16 +67,20 @@ export async function runCoordinator(
 
     if (docUrls.length > 0) {
       await setStatus("crawling_docs");
-      await runAgent(store, platformId, "documentation", { docUrls }, () =>
-        runDocumentationAgent(store, llm, platformId, docUrls),
+      const docResult = await runAgent(store, platformId, "documentation", { docUrls }, () =>
+        runDocumentationAgent(store, llm, platformId, docUrls, crawlOptions),
       );
+      await store.setDocsCrawlWarning?.(platformId, thinPagesWarning(docResult.thinPages));
     }
 
     await setStatus("embedding");
     const endpointSummaries = imported.endpoints.map(
       (e) => `${e.method} ${e.path}: ${e.summary ?? e.description ?? "no description"}`,
     );
-    const docChunks = await store.getRecentDocChunks(platformId, 40);
+
+    const { chunks: docChunks, totalAvailable: chunksTotal } = store.getRepresentativeDocChunks
+      ? await store.getRepresentativeDocChunks(platformId, MAX_DOC_EXCERPTS)
+      : { chunks: await store.getRecentDocChunks(platformId, MAX_DOC_EXCERPTS), totalAvailable: MAX_DOC_EXCERPTS };
 
     await runAgent(
       store,
@@ -63,6 +93,16 @@ export async function runCoordinator(
           endpointSummaries,
           docExcerpts: docChunks.map((c) => c.content),
         }),
+    );
+
+    await store.setUnderstandingScopeWarning?.(
+      platformId,
+      scopeWarning(
+        endpointSummaries.length,
+        Math.min(endpointSummaries.length, MAX_ENDPOINT_SUMMARIES),
+        chunksTotal,
+        docChunks.length,
+      ),
     );
 
     await setStatus("ready");

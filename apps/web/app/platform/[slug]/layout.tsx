@@ -4,8 +4,8 @@ import { use } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { StatusBadge, ThemeToggle } from "@scout/ui";
+import { AlertTriangle } from "lucide-react";
+import { StatusBadge } from "@scout/ui";
 import { useRun } from "@/lib/use-runs";
 
 const TABS = [
@@ -30,21 +30,37 @@ export default function PlatformLayout({
   return (
     <div className="mx-auto max-w-6xl px-8 py-8">
       <div className="flex items-center justify-between">
-        <Link
-          href="/"
-          className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 dark:hover:text-stone-100"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> All runs
-        </Link>
-        <ThemeToggle />
-      </div>
-
-      <div className="mt-4 flex items-center justify-between">
         <div>
           <h1 className="font-serif text-xl font-medium">{run?.platform.name ?? slug}</h1>
         </div>
         {run?.platform.status && <StatusBadge status={run.platform.status} />}
       </div>
+
+      {run?.platform.status === "failed" && (
+        <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.75} />
+          <div>
+            <p className="font-medium">This run failed.</p>
+            <p className="mt-0.5 text-red-700 dark:text-red-400">
+              {run.lastError ?? "No error was recorded. Check the terminal or ~/.scout/runs/" + slug + "/agent-runs.jsonl for details."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {run?.platform.docsCrawlWarning && (
+        <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.75} />
+          <p>{run.platform.docsCrawlWarning}</p>
+        </div>
+      )}
+
+      {run?.platform.understandingScopeWarning && (
+        <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.75} />
+          <p>{run.platform.understandingScopeWarning}</p>
+        </div>
+      )}
 
       <div className="mt-6 flex gap-1 rounded-full bg-stone-100 p-1 text-sm dark:bg-stone-900">
         {TABS.map((tab) => (

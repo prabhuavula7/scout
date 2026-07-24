@@ -83,4 +83,41 @@ describe("LocalFileStore", () => {
     const runs = await LocalFileStore.list();
     expect(runs.map((r) => r.slug)).toEqual(["newer", "older"]);
   });
+
+  describe("getRepresentativeDocChunks", () => {
+    function chunkInput(sourceUrl: string, content: string) {
+      return {
+        content,
+        metadata: { sourceUrl, sourceTitle: sourceUrl, section: null, topic: "general" as const },
+        tokenCount: 10,
+        embedding: [0.1],
+      };
+    }
+
+    it("returns everything and the true total when under the limit", async () => {
+      const { store, platformId } = await LocalFileStore.create("Small Docs", "custom");
+      await store.insertDocChunks(platformId, [chunkInput("https://a.com", "a1"), chunkInput("https://b.com", "b1")]);
+
+      const result = await store.getRepresentativeDocChunks!(platformId, 10);
+      expect(result.totalAvailable).toBe(2);
+      expect(result.chunks).toHaveLength(2);
+    });
+
+    it("spreads the sample evenly across source pages instead of favoring whatever was crawled last", async () => {
+      const { store, platformId } = await LocalFileStore.create("Big Docs", "custom");
+      // Page A has 5 chunks, crawled first; page B has 1 chunk, crawled last.
+      // A naive "last N" selection would return only page B's single chunk.
+      await store.insertDocChunks(
+        platformId,
+        Array.from({ length: 5 }, (_, i) => chunkInput("https://a.com", `a${i}`)),
+      );
+      await store.insertDocChunks(platformId, [chunkInput("https://b.com", "b0")]);
+
+      const result = await store.getRepresentativeDocChunks!(platformId, 2);
+      expect(result.totalAvailable).toBe(6);
+      const sources = result.chunks.map((c) => c.content[0]);
+      expect(sources).toContain("a");
+      expect(sources).toContain("b");
+    });
+  });
 });

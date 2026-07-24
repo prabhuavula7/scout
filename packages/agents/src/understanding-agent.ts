@@ -9,6 +9,14 @@ const UnderstandingDraft = PlatformUnderstanding.omit({
   citations: true,
 });
 
+/** Hard caps on how much of the imported/crawled material feeds one
+ * synthesis prompt. Bounds token cost and keeps the request under any
+ * provider's context limit; anything beyond these is left out, not
+ * hallucinated around, and the coordinator surfaces a warning when that
+ * actually happens (see coordinator.ts's scope-truncation warning). */
+export const MAX_ENDPOINT_SUMMARIES = 300;
+export const MAX_DOC_EXCERPTS = 100;
+
 const SYSTEM_PROMPT = `You are a Staff Solutions Architect analyzing an unfamiliar enterprise API.
 You are given the platform's OpenAPI endpoint summary and a sample of its crawled
 documentation. Produce a rigorous, accurate integration blueprint. Never invent
@@ -38,10 +46,10 @@ export async function runUnderstandingAgent(
   const prompt = `Platform: ${context.platformName}
 
 ## Endpoints (${context.endpointSummaries.length})
-${context.endpointSummaries.slice(0, 150).join("\n")}
+${context.endpointSummaries.slice(0, MAX_ENDPOINT_SUMMARIES).join("\n")}
 
 ## Documentation excerpts
-${context.docExcerpts.slice(0, 40).join("\n\n---\n\n")}
+${context.docExcerpts.slice(0, MAX_DOC_EXCERPTS).join("\n\n---\n\n")}
 
 Generate the full integration blueprint now.`;
 

@@ -3,11 +3,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { runChatAgent, runCoordinator } from "@scout/agents";
-import { getLLMProvider } from "@scout/ai";
 import { getConnector } from "@scout/connectors";
 import { LocalFileStore } from "@scout/store";
 import type { ImportRequest } from "@scout/types";
-import { applyConfigToEnv } from "../config.js";
+import { resolveLLMProvider } from "../config.js";
 import { resolveSourceKind } from "../source-kind.js";
 
 /**
@@ -21,9 +20,7 @@ export function registerMcpCommand(program: Command): void {
     .command("mcp")
     .description("Run Scout as an MCP server (stdio) so coding agents can call it as a tool")
     .action(async () => {
-      await applyConfigToEnv();
-
-      const server = new McpServer({ name: "scout", version: "0.1.0" });
+      const server = new McpServer({ name: "scout", version: "1.0.0" });
 
       server.tool(
         "understand_platform",
@@ -46,7 +43,8 @@ export function registerMcpCommand(program: Command): void {
           await store.setDocUrls(resolvedDocUrls);
 
           try {
-            await runCoordinator(store, platformId, request, resolvedDocUrls);
+            const llm = await resolveLLMProvider();
+            await runCoordinator(store, platformId, request, resolvedDocUrls, llm);
             const understanding = await store.getUnderstanding();
             return {
               content: [
@@ -83,7 +81,8 @@ export function registerMcpCommand(program: Command): void {
           const history = priorMessages.map((m) => ({ role: m.role, content: m.content }));
 
           await store.appendChatMessage("user", question, []);
-          const result = await runChatAgent(store, getLLMProvider(), platformId, question, history);
+          const llm = await resolveLLMProvider();
+          const result = await runChatAgent(store, llm, platformId, question, history);
           await store.appendChatMessage("assistant", result.answer, result.citations);
 
           return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };

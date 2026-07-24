@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { registerUnderstandCommand } from "./commands/understand.js";
 import { registerListCommand } from "./commands/list.js";
+import { registerRmCommand } from "./commands/rm.js";
 import { registerChatCommand } from "./commands/chat.js";
 import { registerExportCommand } from "./commands/export.js";
 import { registerConnectorsCommand } from "./commands/connectors.js";
@@ -15,10 +16,11 @@ const program = new Command();
 program
   .name("scout")
   .description("Understand any enterprise platform in minutes. Local, no login, no server.")
-  .version("0.1.0");
+  .version("1.0.0");
 
 registerUnderstandCommand(program);
 registerListCommand(program);
+registerRmCommand(program);
 registerChatCommand(program);
 registerExportCommand(program);
 registerConnectorsCommand(program);

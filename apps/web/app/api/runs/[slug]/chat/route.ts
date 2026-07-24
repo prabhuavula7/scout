@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { runChatAgent } from "@scout/agents";
-import { getLLMProvider } from "@scout/ai";
 import { LocalFileStore } from "@scout/store";
+import { resolveLLMProvider } from "@/lib/server-config";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -27,8 +27,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   const history = priorMessages.map((m) => ({ role: m.role, content: m.content }));
 
   await store.appendChatMessage("user", body.message, []);
-  const result = await runChatAgent(store, getLLMProvider(), platformId, body.message, history);
-  const saved = await store.appendChatMessage("assistant", result.answer, result.citations);
 
-  return NextResponse.json(saved);
+  try {
+    const llm = await resolveLLMProvider();
+    const result = await runChatAgent(store, llm, platformId, body.message, history);
+    const saved = await store.appendChatMessage("assistant", result.answer, result.citations);
+    return NextResponse.json(saved);
+  } catch (error) {
+    // The user's message is already saved above; only the reply failed
+    // (misconfigured/invalid key, all configured providers down, etc).
+    // Surface the real reason instead of an unhandled 500 with no message,
+    // so a bad key reads as "your OpenAI key looks wrong" instead of a
+    // silent crash.
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
 }

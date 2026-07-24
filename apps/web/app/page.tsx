@@ -2,32 +2,41 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { Compass, Terminal } from "lucide-react";
-import { EmptyState, StatusBadge, ThemeToggle } from "@scout/ui";
-import { useRuns } from "@/lib/use-runs";
+import { Plus, Terminal, Trash2 } from "lucide-react";
+import { EmptyState, StatusBadge } from "@scout/ui";
+import { useRemoveRun, useRuns } from "@/lib/use-runs";
 
 export default function HomePage() {
   const { data: runs, isLoading } = useRuns();
+  const removeRun = useRemoveRun();
+
+  function handleDelete(e: React.MouseEvent, slug: string, name: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm(`Delete "${name}"? This can't be undone.`)) {
+      removeRun.mutate(slug);
+    }
+  }
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
-      <header className="flex items-center justify-between">
-        <span className="flex items-center gap-2 font-serif text-base font-medium tracking-tight">
-          <Compass className="h-4 w-4 text-accent-500" strokeWidth={1.75} />
-          Scout
-        </span>
-        <ThemeToggle />
-      </header>
-
-      <div className="mt-10">
-        <h1 className="font-serif text-2xl font-medium tracking-tight">Runs</h1>
-        <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-          Everything you've pointed{" "}
-          <code className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs dark:bg-stone-900">
-            scout understand
-          </code>{" "}
-          at, stored locally under <code className="font-mono text-xs">~/.scout/runs</code>.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-serif text-2xl font-medium tracking-tight">Runs</h1>
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
+            Everything you've pointed{" "}
+            <code className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs dark:bg-stone-900">
+              scout understand
+            </code>{" "}
+            at, stored locally under <code className="font-mono text-xs">~/.scout/runs</code>.
+          </p>
+        </div>
+        <Link
+          href="/new"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-accent-500 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-accent-600"
+        >
+          <Plus className="h-3.5 w-3.5" strokeWidth={2} /> New
+        </Link>
       </div>
 
       <div className="mt-8">
@@ -37,7 +46,7 @@ export default function HomePage() {
           <EmptyState
             icon={<Terminal className="h-8 w-8" />}
             title="No runs yet"
-            description='Run "scout understand <spec-url>" from your terminal, then refresh this page.'
+            description='Point Scout at a spec from the "New" tab, or run "scout understand <spec-url>" from your terminal.'
           />
         ) : (
           <div className="divide-y divide-stone-200 rounded-xl border border-stone-200 dark:divide-stone-800 dark:border-stone-800">
@@ -51,7 +60,17 @@ export default function HomePage() {
                   <p className="font-medium text-stone-900 dark:text-stone-100">{run.name}</p>
                   <p className="mt-0.5 text-xs text-stone-500">{run.connectorSlug}</p>
                 </div>
-                <StatusBadge status={run.status} />
+                <div className="flex items-center gap-3">
+                  <StatusBadge status={run.status} />
+                  <button
+                    type="button"
+                    onClick={(e) => handleDelete(e, run.slug, run.name)}
+                    aria-label="Delete run"
+                    className="rounded-lg p-1.5 text-stone-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </Link>
             ))}
           </div>

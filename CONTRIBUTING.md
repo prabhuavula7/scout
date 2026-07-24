@@ -16,6 +16,8 @@ pnpm --filter scoutcli dev -- understand <spec-url> --docs <docs-url>
 pnpm --filter scoutcli dev -- serve
 ```
 
+Prefer not to install Node/pnpm locally at all? `docker compose up` builds and runs Scout from source; see the README's "Run with Docker" section. Useful for a quick sanity check that a change didn't break the packaged build, since it goes through the same `pnpm build` + npm-dependency-resolution path `npm publish` would.
+
 ## Adding a connector
 
 This is the easiest, highest-value contribution. A connector is a JSON file, no code:
@@ -45,6 +47,15 @@ This is the easiest, highest-value contribution. A connector is a JSON file, no 
 3. If it produces a real, non-hallucinated understanding (check the summary and data model against the platform's actual docs), set `"implemented": true` and open a PR adding your JSON file to `packages/connectors/registry/`. If the spec was messy or the pipeline choked on something, that's useful too, open an issue describing what broke; `implemented: false` connectors are still valuable as a declared target list.
 
 You can also add or override a connector locally without a PR: `scout connectors add <your-file.json>` writes it to `~/.scout/connectors/`, which takes precedence over the bundled set by slug.
+
+## Adding an LLM or search provider
+
+Both are adapter interfaces, same shape as adding a new import kind:
+
+- **LLM**: implement `LLMProvider` (`packages/ai/src/provider.ts`: `complete`, `completeStructured`, `streamComplete`, `embed`) in a new file under `packages/ai/src/providers/`, wire it into `buildProviderFromEntry` in `packages/ai/src/factory.ts`, and add the kind to `LLMProviderKind` in `packages/types/src/config.ts`. If the backend speaks the OpenAI chat-completions wire protocol (most self-hosted/local model servers do, and most hosted aggregators too), you likely don't need a new adapter at all, existing `openai-compatible` entries already cover this via a custom `--base-url`.
+- **Search**: implement `SearchProvider` (`packages/agents/src/search/provider.ts`: one `search(query, maxResults)` method) under `packages/agents/src/search/`, wire it into `buildSearchProviderFromEntry` in `packages/agents/src/search/factory.ts`, and add the kind to `SearchProviderKind` in `packages/types/src/config.ts`.
+
+Either way, `scout config llm add <kind>` / `scout config search add <kind>` on the CLI pick up a new kind automatically once it's in the shared type, no CLI changes needed. The web Settings tab's provider dropdown is a manually-maintained label map (`LLM_KIND_LABELS`/`SEARCH_KIND_LABELS` in `apps/web/app/settings/page.tsx`) keyed by the same enum, so it needs one added entry there too; TypeScript will error on the incomplete `Record` if you forget.
 
 ## Adding an import kind
 

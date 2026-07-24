@@ -2,9 +2,8 @@ import readline from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { Command } from "commander";
 import { runChatAgent } from "@scout/agents";
-import { getLLMProvider } from "@scout/ai";
 import { LocalFileStore } from "@scout/store";
-import { applyConfigToEnv } from "../config.js";
+import { resolveLLMProvider } from "../config.js";
 
 export function registerChatCommand(program: Command): void {
   program
@@ -12,8 +11,6 @@ export function registerChatCommand(program: Command): void {
     .description("Chat with a platform's indexed documentation, grounded with citations")
     .argument("<slug>", "the run slug, see `scout list`")
     .action(async (slug: string) => {
-      await applyConfigToEnv();
-
       const opened = await LocalFileStore.open(slug);
       if (!opened) {
         console.error(`No run found for "${slug}". Run \`scout list\` to see what's available.`);
@@ -21,7 +18,7 @@ export function registerChatCommand(program: Command): void {
         return;
       }
       const { store, platformId } = opened;
-      const llm = getLLMProvider();
+      const llm = await resolveLLMProvider();
 
       const priorMessages = await store.getChatHistory();
       const history = priorMessages.map((m) => ({ role: m.role, content: m.content }));

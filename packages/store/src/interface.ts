@@ -49,10 +49,32 @@ export interface AgentStore {
 
   setPlatformStatus(platformId: string, status: PlatformStatus): Promise<void>;
   applyImportResult(platformId: string, fields: ImportResultFields): Promise<void>;
+  /** Records (or clears, with null) a warning about the doc crawl, e.g. one
+   * or more pages coming back with suspiciously little extractable content
+   * (commonly a JS-rendered page cheerio's static fetch can't execute).
+   * Optional: the dormant hosted-mode store (DrizzleAgentStore) doesn't
+   * implement this yet, and callers should treat its absence as "no
+   * warning support" rather than a hard requirement. */
+  setDocsCrawlWarning?(platformId: string, warning: string | null): Promise<void>;
+  /** Same idea as setDocsCrawlWarning, for the understanding-synthesis step
+   * itself hitting its endpoint/doc-chunk scope caps (see
+   * MAX_ENDPOINT_SUMMARIES / MAX_DOC_EXCERPTS in understanding-agent.ts).
+   * Optional for the same reason. */
+  setUnderstandingScopeWarning?(platformId: string, warning: string | null): Promise<void>;
   insertEndpoints(platformId: string, endpoints: Array<Omit<Endpoint, "id" | "platformId">>): Promise<void>;
 
   insertDocChunks(platformId: string, chunks: DocChunkInput[]): Promise<number>;
   getRecentDocChunks(platformId: string, limit: number): Promise<Array<{ id: string; content: string }>>;
+  /** Same idea as getRecentDocChunks, but instead of biasing toward whatever
+   * was crawled last (an artifact of crawl order, not relevance), spreads
+   * the selection evenly across every source page so understanding
+   * synthesis doesn't end up built from just the last 2-3 pages crawled on
+   * a large, many-page doc site. Optional: falls back to getRecentDocChunks
+   * where unimplemented (the dormant hosted-mode store). */
+  getRepresentativeDocChunks?(
+    platformId: string,
+    limit: number,
+  ): Promise<{ chunks: Array<{ id: string; content: string }>; totalAvailable: number }>;
   hybridSearch(
     platformId: string,
     queryEmbedding: number[],

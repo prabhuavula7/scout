@@ -30,6 +30,8 @@ export interface PlatformRecord {
   history: Array<{ timestamp: string; trigger: string; summary: string }>;
   docUrls?: string[];
   lastDocsHash?: Record<string, string>;
+  docsCrawlWarning?: string | null;
+  understandingScopeWarning?: string | null;
 }
 
 export interface ChatMessageRecord {
@@ -40,7 +42,7 @@ export interface ChatMessageRecord {
   createdAt: string;
 }
 
-interface AgentRunRecord {
+export interface AgentRunRecord {
   id: string;
   platformId: string;
   agent: AgentName;
@@ -126,6 +128,17 @@ export class LocalFileStore implements AgentStore {
     return records.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
 
+  /** Deletes a run's entire directory (understanding, chunks, chat history,
+   * history/ snapshots). Irreversible; returns false if the slug didn't exist
+   * rather than throwing, so callers can distinguish "already gone" from a
+   * real failure. */
+  static async remove(slug: string): Promise<boolean> {
+    const dir = runDir(slug);
+    if (!(await LocalFileStore.exists(dir))) return false;
+    await fs.rm(dir, { recursive: true, force: true });
+    return true;
+  }
+
   private static async uniqueSlug(base: string): Promise<string> {
     let candidate = base;
     let n = 2;
@@ -163,6 +176,14 @@ export class LocalFileStore implements AgentStore {
     await this.updatePlatform(fields);
   }
 
+  async setDocsCrawlWarning(_platformId: string, warning: string | null): Promise<void> {
+    await this.updatePlatform({ docsCrawlWarning: warning });
+  }
+
+  async setUnderstandingScopeWarning(_platformId: string, warning: string | null): Promise<void> {
+    await this.updatePlatform({ understandingScopeWarning: warning });
+  }
+
   async getEndpoints(): Promise<Endpoint[]> {
     return readJson<Endpoint[]>(path.join(this.dir, "endpoints.json"), []);
   }
@@ -197,6 +218,45 @@ export class LocalFileStore implements AgentStore {
       .slice(-limit)
       .reverse()
       .map((c) => ({ id: c.id, content: c.content }));
+  }
+
+  async getRepresentativeDocChunks(
+    _platformId: string,
+    limit: number,
+  ): Promise<{ chunks: Array<{ id: string; content: string }>; totalAvailable: number }> {
+    const chunks = await this.getChunks();
+    if (chunks.length <= limit) {
+      return { chunks: chunks.map((c) => ({ id: c.id, content: c.content })), totalAvailable: chunks.length };
+    }
+
+    // Round-robin across source pages (one chunk from each page per round)
+    // instead of just taking the last N crawled: a large doc site's
+    // understanding shouldn't be built from whichever 2-3 pages happened
+    // to be crawled last, it should see a slice of every page.
+    const bySource = new Map<string, StoredChunk[]>();
+    for (const chunk of chunks) {
+      const key = chunk.metadata.sourceUrl ?? "";
+      const group = bySource.get(key);
+      if (group) group.push(chunk);
+      else bySource.set(key, [chunk]);
+    }
+    const groups = [...bySource.values()];
+
+    const sampled: StoredChunk[] = [];
+    for (let round = 0; sampled.length < limit; round++) {
+      const before = sampled.length;
+      for (const group of groups) {
+        if (round >= group.length) continue;
+        sampled.push(group[round]!);
+        if (sampled.length >= limit) break;
+      }
+      if (sampled.length === before) break; // every group exhausted
+    }
+
+    return {
+      chunks: sampled.map((c) => ({ id: c.id, content: c.content })),
+      totalAvailable: chunks.length,
+    };
   }
 
   async hybridSearch(

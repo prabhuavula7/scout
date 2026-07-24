@@ -1,0 +1,19 @@
+services:
+  scout:
+    build: .
+    ports:
+      - "4207:4207"
+    volumes:
+      # Persists ~/.scout (runs, provider config, connector overrides)
+      # across container restarts/rebuilds. Delete this volume to start
+      # completely fresh.
+      - scout-data:/data
+    environment:
+      # Optional zero-setup path: set these and skip the Settings tab /
+      # `scout config` entirely, same env-var fallback the CLI already
+      # supports. Leave unset and configure providers in the web UI instead.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+
+volumes:
+  scout-data:

@@ -1,0 +1,12 @@
+# Defense-in-depth: package.json's "files": ["dist"] already restricts what
+# `npm publish` includes to just dist/, but this makes the intent explicit
+# and keeps working even if that allowlist is ever loosened.
+src/
+*.test.ts
+tsconfig.json
+tsup.config.ts
+.env
+.env.*
+*.log
+.turbo/
+node_modules/

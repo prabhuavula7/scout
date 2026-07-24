@@ -14,10 +14,18 @@ export interface RunSummary {
 }
 
 export interface RunDetail {
-  platform: RunSummary & { baseUrl: string | null; docsUrl: string | null };
+  platform: RunSummary & {
+    baseUrl: string | null;
+    docsUrl: string | null;
+    docsCrawlWarning?: string | null;
+    understandingScopeWarning?: string | null;
+  };
   endpoints: Endpoint[];
   understanding: PlatformUnderstanding | null;
   resources: Resource[];
+  /** Why the run failed, when status is "failed"; null otherwise or if no
+   * agent-run record captured a reason. */
+  lastError: string | null;
 }
 
 export interface ChatMessageRecord {
@@ -40,6 +48,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json();
 }
 
+export interface ConnectorDefinition {
+  slug: string;
+  name: string;
+  category: string;
+  implemented: boolean;
+  suggestedDocsUrl: string | null;
+  defaultAuthScheme: string;
+  description: string;
+}
+
 export function useRuns() {
   return useQuery({
     queryKey: ["runs"],
@@ -48,11 +66,61 @@ export function useRuns() {
   });
 }
 
+export function useConnectors() {
+  return useQuery({
+    queryKey: ["connectors"],
+    queryFn: () => request<ConnectorDefinition[]>("/api/connectors"),
+    staleTime: Infinity,
+  });
+}
+
+export interface CreateRunInput {
+  source: string;
+  kind: "openapi_url" | "openapi_raw";
+  docUrls: string[];
+  label?: string | undefined;
+  connectorSlug?: string | undefined;
+  docsDepth: number;
+  docsMaxPages: number;
+}
+
+export function useCreateRun() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateRunInput) =>
+      request<{ slug: string }>("/api/runs", { method: "POST", body: JSON.stringify(input) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["runs"] }),
+  });
+}
+
+export function useEstimateCrawl() {
+  return useMutation({
+    mutationFn: (input: { docUrls: string[]; docsDepth: number; docsMaxPages: number }) =>
+      request<{ text: string }>("/api/runs/estimate", { method: "POST", body: JSON.stringify(input) }),
+  });
+}
+
+export function useRemoveRun() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (slug: string) => request<{ ok: true }>(`/api/runs/${slug}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["runs"] }),
+  });
+}
+
 export function useRun(slug: string) {
   return useQuery({
     queryKey: ["run", slug],
     queryFn: () => request<RunDetail>(`/api/runs/${slug}`),
     enabled: !!slug,
+  });
+}
+
+export function useRunResearch(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<Resource[]>(`/api/runs/${slug}/research`, { method: "POST" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["run", slug] }),
   });
 }
 
