@@ -4,6 +4,12 @@ All notable changes to Scout are documented here. Format loosely follows [Keep a
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-07-24
+
+### Fixed
+
+- 1.1.3 built and packed cleanly locally but failed CI's `typecheck` step: `packages/cli/src/commands/mcp.test.ts` indexed `result.content[0]` directly, which `noUncheckedIndexedAccess` (on in this repo's base tsconfig) types as possibly `undefined`. My local `tsc --noEmit` run had somehow gone clean before the file reached its final form; a from-scratch monorepo-wide `typecheck`/`test` now catches this. Replaced the raw indexing with a `firstText()` helper that throws a clear error instead of type-asserting past the check.
+
 ## [1.1.3] - 2026-07-24
 
 ### Added

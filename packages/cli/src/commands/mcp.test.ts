@@ -61,6 +61,12 @@ afterEach(async () => {
   await fs.rm(tmpHome, { recursive: true, force: true });
 });
 
+function firstText(result: Record<string, unknown>): string {
+  const [first] = result.content as Array<{ text: string }>;
+  if (!first) throw new Error("Expected at least one content block in the tool result");
+  return first.text;
+}
+
 async function connectedClient() {
   const { createScoutMcpServer } = await import("./mcp.js");
   const server = createScoutMcpServer();
@@ -97,22 +103,22 @@ describe("scout mcp server (end-to-end over the MCP protocol)", () => {
       arguments: { specUrl: "https://example.com/openapi.json", label: "Widget API" },
     });
     expect(understandResult.isError).toBeFalsy();
-    const understandPayload = JSON.parse((understandResult.content as Array<{ text: string }>)[0].text);
+    const understandPayload = JSON.parse(firstText(understandResult));
     expect(understandPayload.status).toBe("ready");
     const slug = understandPayload.slug as string;
     expect(slug).toBeTruthy();
 
     const listResult = await client.callTool({ name: "list_platforms", arguments: {} });
-    const runs = JSON.parse((listResult.content as Array<{ text: string }>)[0].text);
+    const runs = JSON.parse(firstText(listResult));
     expect(runs).toEqual([{ slug, name: "Widget API", status: "ready" }]);
 
     const refreshResult = await client.callTool({ name: "refresh_platform", arguments: { slug } });
     expect(refreshResult.isError).toBeFalsy();
-    const refreshPayload = JSON.parse((refreshResult.content as Array<{ text: string }>)[0].text);
+    const refreshPayload = JSON.parse(firstText(refreshResult));
     expect(refreshPayload.understanding.summary).toBe("refreshed");
 
     const exportResult = await client.callTool({ name: "export_platform", arguments: { slug, format: "json" } });
-    const exported = JSON.parse((exportResult.content as Array<{ text: string }>)[0].text);
+    const exported = JSON.parse(firstText(exportResult));
     expect(exported.summary).toBe("refreshed");
 
     const researchResult = await client.callTool({ name: "research_platform", arguments: { slug } });
@@ -129,7 +135,7 @@ describe("scout mcp server (end-to-end over the MCP protocol)", () => {
   it("list_connectors returns the real bundled connector registry", async () => {
     const client = await connectedClient();
     const result = await client.callTool({ name: "list_connectors", arguments: {} });
-    const connectors = JSON.parse((result.content as Array<{ text: string }>)[0].text);
+    const connectors = JSON.parse(firstText(result));
     expect(connectors.some((c: { slug: string }) => c.slug === "contentful")).toBe(true);
   });
 
