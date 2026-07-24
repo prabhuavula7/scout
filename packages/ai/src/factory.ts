@@ -78,10 +78,10 @@ export function buildLLMProvider(entries: LLMProviderEntry[]): LLMProvider {
   const chat = chainForRole(entries, "chat");
   const embedding = chainForRole(entries, "embedding");
 
-  const noChatConfigured =
-    'No LLM provider configured for the "chat" role. Run `scout config llm add` or set one up in the web viewer\'s Settings tab.';
-  const noEmbeddingConfigured =
-    'No LLM provider configured for the "embedding" role. Run `scout config llm add` or set one up in the web viewer\'s Settings tab.';
+  const setupHint =
+    "Get started with one: `scout config llm add openai --api-key sk-...` (or `anthropic`, `azure-openai`, `openrouter`, `openai-compatible` for local models). Or run `scout serve` and add one from the Settings tab.";
+  const noChatConfigured = `No LLM provider configured for the "chat" role. ${setupHint}`;
+  const noEmbeddingConfigured = `No LLM provider configured for the "embedding" role. ${setupHint}`;
 
   return {
     name: [chat?.name, embedding?.name].filter(Boolean).join(" | ") || "unconfigured",

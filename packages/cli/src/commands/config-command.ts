@@ -128,7 +128,13 @@ export function registerConfigCommand(program: Command): void {
   llm.command("list").action(async () => {
     const { llmProviders } = await loadScoutConfig();
     if (llmProviders.length === 0) {
-      console.log("No LLM providers configured.");
+      console.log(
+        "No LLM providers configured. Add one to get started:\n" +
+          "  scout config llm add openai --api-key sk-...\n" +
+          "  scout config llm add anthropic --api-key sk-ant-...\n" +
+          "  scout config llm add openai-compatible --base-url http://localhost:11434/v1 --api-key ollama --chat-model llama3.1  (local models via Ollama, LM Studio, vLLM, etc)\n" +
+          "Or run `scout serve` and add one from the Settings tab.",
+      );
       return;
     }
     for (const entry of [...llmProviders].sort((a, b) => a.priority - b.priority)) {
@@ -180,7 +186,12 @@ export function registerConfigCommand(program: Command): void {
   search.command("list").action(async () => {
     const { searchProviders } = await loadScoutConfig();
     if (searchProviders.length === 0) {
-      console.log("No search providers configured.");
+      console.log(
+        "No search providers configured (optional; used by `scout research` and the web UI's related-articles button). Add one:\n" +
+          "  scout config search add tavily --api-key tvly-...\n" +
+          "  scout config search add serpapi --api-key <key>\n" +
+          "Or run `scout serve` and add one from the Settings tab.",
+      );
       return;
     }
     for (const entry of [...searchProviders].sort((a, b) => a.priority - b.priority)) {

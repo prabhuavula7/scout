@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useConnectors, useCreateRun, useEstimateCrawl } from "@/lib/use-runs";
+import { GettingStartedBanner } from "@/components/getting-started-banner";
 
 const inputClass =
   "w-full rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100";
@@ -76,6 +77,10 @@ export default function NewRunPage() {
         in the background, same pipeline as <code className="font-mono text-xs">scout understand</code>; you'll land
         on the run's page and its status updates live.
       </p>
+
+      <div className="mt-6">
+        <GettingStartedBanner />
+      </div>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5 rounded-xl border border-stone-200 p-5 dark:border-stone-800">
         <div>

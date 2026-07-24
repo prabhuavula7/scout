@@ -97,6 +97,13 @@ function LLMProvidersSection({ entries }: { entries: MaskedLLMProviderEntry[] })
         description="OpenAI, Anthropic, Azure OpenAI, OpenRouter, or any OpenAI-compatible endpoint (local/open-source models included)."
       />
 
+      {sorted.length === 0 && (
+        <p className="text-sm text-stone-500 dark:text-stone-400">
+          No providers yet. Add one below to run <code className="font-mono text-xs">scout understand</code> or use
+          the chat.
+        </p>
+      )}
+
       {sorted.length > 0 && (
         <ul className="divide-y divide-stone-200 rounded-xl border border-stone-200 dark:divide-stone-800 dark:border-stone-800">
           {sorted.map((entry) => (

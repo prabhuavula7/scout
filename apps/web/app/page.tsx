@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { Plus, Terminal, Trash2 } from "lucide-react";
 import { EmptyState, StatusBadge } from "@scout/ui";
 import { useRemoveRun, useRuns } from "@/lib/use-runs";
+import { GettingStartedBanner } from "@/components/getting-started-banner";
 
 export default function HomePage() {
   const { data: runs, isLoading } = useRuns();
@@ -37,6 +38,10 @@ export default function HomePage() {
         >
           <Plus className="h-3.5 w-3.5" strokeWidth={2} /> New
         </Link>
+      </div>
+
+      <div className="mt-6">
+        <GettingStartedBanner />
       </div>
 
       <div className="mt-8">

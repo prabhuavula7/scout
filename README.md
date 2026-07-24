@@ -10,10 +10,18 @@ Point Scout at a platform's OpenAPI/Swagger spec and its docs, and it produces a
 ```
 npm install -g @dotapk7/scoutcli
 
+# 1. Add an LLM provider (required once; picks the API key up from ~/.scout/config.json after this)
+scout config llm add openai --api-key sk-...
+#   ...or: anthropic --api-key sk-ant-...  /  azure-openai --base-url <endpoint> --api-key <key>
+#   ...or: openai-compatible --base-url http://localhost:11434/v1 --api-key ollama --chat-model llama3.1  (local models: Ollama, LM Studio, vLLM, etc)
+
+# 2. Point it at a spec
 scout understand https://petstore3.swagger.io/api/v3/openapi.json --docs https://example.com/docs
 scout chat petstore-openapi-3-0
 scout serve
 ```
+
+Prefer a browser to a terminal? Skip straight to `scout serve` (no config step needed first) and add a provider from the Settings tab instead — the web app walks you through the same thing with a form.
 
 Don't want Node/npm on your machine at all? See "Run with Docker" below, one `docker compose up` and you're at the web UI.
 
