@@ -4,6 +4,12 @@ All notable changes to Scout are documented here. Format loosely follows [Keep a
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-07-24
+
+### Added
+
+- First-run onboarding guidance, CLI and web: nothing previously told a new user they needed an LLM provider key before their first action, only a generic error buried inside a failed background run. The web app now shows a dismiss-when-configured "Add an LLM provider before your first run" banner on the Runs and New pages, plus an explicit empty state on Settings' provider list. `scout config llm/search list` on an empty config, and the "not configured" errors thrown mid-pipeline, now include concrete copy-paste commands (OpenAI, Anthropic, local models via `openai-compatible`) instead of just naming the missing role. The README's quickstart snippet shows the provider-setup step before `scout understand` instead of assuming it as implied context.
+
 ## [1.1.0] - 2026-07-24
 
 ### Fixed
