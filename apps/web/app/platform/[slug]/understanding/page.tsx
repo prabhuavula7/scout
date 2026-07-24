@@ -6,6 +6,7 @@ import { EmptyState } from "@scout/ui";
 import { useRun, useRunResearch } from "@/lib/use-runs";
 import { MermaidDiagram } from "@/components/mermaid-diagram";
 import { TableOfContents } from "@/components/table-of-contents";
+import { PipelineProgress } from "@/components/pipeline-progress";
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
@@ -51,6 +52,11 @@ export default function UnderstandingPage({ params }: { params: Promise<{ slug: 
   const resources = run?.resources ?? [];
 
   if (isLoading) return <p className="text-sm text-stone-500">Loading analysis…</p>;
+
+  const status = run?.platform.status;
+  if (status && status !== "ready" && status !== "failed") {
+    return <PipelineProgress status={status} />;
+  }
 
   if (!understanding) {
     return (

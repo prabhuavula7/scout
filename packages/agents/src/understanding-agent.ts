@@ -14,8 +14,8 @@ const UnderstandingDraft = PlatformUnderstanding.omit({
  * provider's context limit; anything beyond these is left out, not
  * hallucinated around, and the coordinator surfaces a warning when that
  * actually happens (see coordinator.ts's scope-truncation warning). */
-export const MAX_ENDPOINT_SUMMARIES = 300;
-export const MAX_DOC_EXCERPTS = 100;
+export const MAX_ENDPOINT_SUMMARIES = 750;
+export const MAX_DOC_EXCERPTS = 200;
 
 const SYSTEM_PROMPT = `You are a Staff Solutions Architect analyzing an unfamiliar enterprise API.
 You are given the platform's OpenAPI endpoint summary and a sample of its crawled

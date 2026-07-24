@@ -4,9 +4,9 @@ import { use } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 import { StatusBadge } from "@scout/ui";
-import { useRun } from "@/lib/use-runs";
+import { useRun, useRefreshRun } from "@/lib/use-runs";
 
 const TABS = [
   { slug: "explorer", label: "API Explorer" },
@@ -24,8 +24,10 @@ export default function PlatformLayout({
   const { slug } = use(params);
   const pathname = usePathname();
   const { data: run } = useRun(slug);
+  const refresh = useRefreshRun(slug);
 
   const activeTab = TABS.find((t) => pathname.includes(`/${t.slug}`))?.slug ?? "understanding";
+  const isBusy = run?.platform.status ? !["ready", "failed"].includes(run.platform.status) : false;
 
   return (
     <div className="mx-auto max-w-6xl px-8 py-8">
@@ -33,7 +35,35 @@ export default function PlatformLayout({
         <div>
           <h1 className="font-serif text-xl font-medium">{run?.platform.name ?? slug}</h1>
         </div>
-        {run?.platform.status && <StatusBadge status={run.platform.status} />}
+        <div className="flex items-center gap-3">
+          {run?.platform.status && !isBusy && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                title="Re-synthesize understanding from already-crawled data (picks up raised limits, no re-crawl)"
+                onClick={() => refresh.mutate({ mode: "resynthesize" })}
+                disabled={refresh.isPending}
+                className="flex items-center gap-1.5 rounded-lg border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-600 transition hover:bg-stone-50 disabled:opacity-50 dark:border-stone-800 dark:text-stone-400 dark:hover:bg-stone-900"
+              >
+                <RefreshCw className="h-3 w-3" strokeWidth={2} />
+                Refresh
+              </button>
+              {run.platform.docUrls && run.platform.docUrls.length > 0 && (
+                <button
+                  type="button"
+                  title="Re-crawl documentation, then refresh understanding"
+                  onClick={() => refresh.mutate({ mode: "recrawl" })}
+                  disabled={refresh.isPending}
+                  className="flex items-center gap-1.5 rounded-lg border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-600 transition hover:bg-stone-50 disabled:opacity-50 dark:border-stone-800 dark:text-stone-400 dark:hover:bg-stone-900"
+                >
+                  <RefreshCw className="h-3 w-3" strokeWidth={2} />
+                  Recrawl docs
+                </button>
+              )}
+            </div>
+          )}
+          {run?.platform.status && <StatusBadge status={run.platform.status} />}
+        </div>
       </div>
 
       {run?.platform.status === "failed" && (

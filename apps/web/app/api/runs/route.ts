@@ -17,8 +17,8 @@ const CreateRunBody = z.object({
   docUrls: z.array(z.string().url()).default([]),
   label: z.string().min(1).max(120).optional(),
   connectorSlug: z.string().optional(),
-  docsDepth: z.number().int().min(0).max(5).default(1),
-  docsMaxPages: z.number().int().min(1).max(100).default(20),
+  docsDepth: z.number().int().min(0).max(5).default(2),
+  docsMaxPages: z.number().int().min(1).max(200).default(50),
 });
 
 export async function POST(request: Request) {
@@ -43,6 +43,7 @@ export async function POST(request: Request) {
   await store.setDocUrls(docUrls);
 
   const crawlOptions = { maxDepth: body.docsDepth, maxPages: body.docsMaxPages };
+  await store.setCrawlOptions(crawlOptions.maxDepth, crawlOptions.maxPages);
 
   // Fire-and-poll: `scout serve` is a long-running local process (unlike a
   // serverless function that freezes after the response), so it's safe to

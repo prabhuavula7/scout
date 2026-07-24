@@ -56,6 +56,23 @@ describe("UnderstandingPage", () => {
     expect(await screen.findByText(/not generated yet/i)).toBeInTheDocument();
   });
 
+  it("shows pipeline progress instead of the empty state while a run is still in progress", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          ...RUN_WITH_UNDERSTANDING,
+          understanding: null,
+          platform: { ...RUN_WITH_UNDERSTANDING.platform, status: "crawling_docs" },
+        }),
+      }),
+    );
+    await renderWithQueryClient("some-platform");
+    expect(await screen.findByText("Crawl docs")).toBeInTheDocument();
+    expect(screen.queryByText(/not generated yet/i)).not.toBeInTheDocument();
+  });
+
   it("renders the summary once an understanding exists", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => RUN_WITH_UNDERSTANDING }));
     await renderWithQueryClient("some-platform");

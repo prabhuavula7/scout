@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { runDocumentationAgent, runUnderstandingAgent, MAX_ENDPOINT_SUMMARIES, MAX_DOC_EXCERPTS } from "@scout/agents";
+import { runRefresh } from "@scout/agents";
 import type { LLMProvider } from "@scout/ai";
 import { LocalFileStore } from "@scout/store";
 import { resolveLLMProvider } from "../config.js";
@@ -21,40 +21,12 @@ async function checkForChanges(docUrls: string[], lastHashes: Record<string, str
 }
 
 async function refresh(store: LocalFileStore, platformId: string, docUrls: string[], llm: LLMProvider): Promise<void> {
-  await store.resetDocChunks();
-  const docResult = await runDocumentationAgent(store, llm, platformId, docUrls);
-  await store.setDocsCrawlWarning(
-    platformId,
-    docResult.thinPages.length > 0
-      ? `${docResult.thinPages.length} doc page(s) returned little to no extractable content, possibly JavaScript-rendered pages a static fetch can't execute: ${docResult.thinPages.join(", ")}. Grounded answers about those pages may be limited or missing.`
-      : null,
-  );
-
-  const endpoints = await store.getEndpoints();
   const platform = await store.getPlatform();
-  const endpointSummaries = endpoints.map(
-    (e) => `${e.method} ${e.path}: ${e.summary ?? e.description ?? "no description"}`,
-  );
-  const { chunks: docChunks, totalAvailable: chunksTotal } = store.getRepresentativeDocChunks
-    ? await store.getRepresentativeDocChunks(platformId, MAX_DOC_EXCERPTS)
-    : { chunks: await store.getRecentDocChunks(platformId, MAX_DOC_EXCERPTS), totalAvailable: MAX_DOC_EXCERPTS };
-
-  await runUnderstandingAgent(store, llm, platformId, {
-    platformName: platform.name,
-    endpointSummaries,
-    docExcerpts: docChunks.map((c) => c.content),
-  });
-
-  const endpointsUsed = Math.min(endpointSummaries.length, MAX_ENDPOINT_SUMMARIES);
-  const parts: string[] = [];
-  if (endpointsUsed < endpointSummaries.length) parts.push(`${endpointsUsed} of ${endpointSummaries.length} endpoints`);
-  if (docChunks.length < chunksTotal) parts.push(`${docChunks.length} of ${chunksTotal} doc chunks`);
-  await store.setUnderstandingScopeWarning?.(
-    platformId,
-    parts.length > 0
-      ? `This analysis used ${parts.join(" and ")} (kept within a bounded size/cost per run). The blueprint below may not reflect the full platform.`
-      : null,
-  );
+  // Reuse this run's own crawl settings (set at `scout understand` time)
+  // rather than a hardcoded default, so a user's --docs-depth/--docs-max-pages
+  // choice isn't silently discarded the first time a watched doc page changes.
+  const crawlOptions = platform.crawlOptions ?? { maxDepth: 2, maxPages: 50 };
+  await runRefresh(store, platformId, llm, docUrls, "recrawl", crawlOptions);
 }
 
 export function registerWatchCommand(program: Command): void {

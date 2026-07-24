@@ -102,4 +102,53 @@ describe("runDocumentationAgent", () => {
 
     expect(result.thinPages).toEqual(["https://docs.example.com/spa"]);
   });
+
+  it("skips a discovered link that 404s instead of aborting the whole crawl (regression: a single dead link found via recursion used to fail the entire run)", async () => {
+    const fetchMock = vi.fn().mockImplementation(async (input: string | URL) => {
+      const url = String(input);
+      if (url === "https://docs.example.com/start") {
+        return htmlResponse(
+          `<html><head><title>Start</title></head><body><main><p>${"x".repeat(600)}</p></main><a href="/dead-link">Dead</a><a href="/fine">Fine</a></body></html>`,
+        );
+      }
+      if (url === "https://docs.example.com/dead-link") {
+        return { ok: false, status: 404, text: async () => "" };
+      }
+      return htmlResponse(`<html><head><title>Fine</title></head><body><main><p>${"y".repeat(600)}</p></main></body></html>`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runDocumentationAgent(fakeStore(), fakeLLM(), "platform-1", ["https://docs.example.com/start"], {
+      maxDepth: 1,
+      maxPages: 10,
+    });
+
+    expect(result.failedPages).toEqual([
+      { url: "https://docs.example.com/dead-link", error: expect.stringContaining("HTTP 404") },
+    ]);
+    // The seed page and the other discovered link still succeeded.
+    const fetchedUrls = fetchMock.mock.calls.map((call) => String(call[0]));
+    expect(fetchedUrls).toContain("https://docs.example.com/fine");
+  });
+
+  it("skips a broken seed URL without throwing, so other seed URLs still get crawled", async () => {
+    const fetchMock = vi.fn().mockImplementation(async (input: string | URL) => {
+      const url = String(input);
+      if (url === "https://docs.example.com/broken") return { ok: false, status: 500, text: async () => "" };
+      return htmlResponse(`<html><head><title>Good</title></head><body><main><p>${"x".repeat(600)}</p></main></body></html>`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runDocumentationAgent(
+      fakeStore(),
+      fakeLLM(),
+      "platform-1",
+      ["https://docs.example.com/broken", "https://docs.example.com/good"],
+      { maxDepth: 0 },
+    );
+
+    expect(result.failedPages).toHaveLength(1);
+    expect(result.failedPages[0]!.url).toBe("https://docs.example.com/broken");
+    expect(result.chunksStored).toBeGreaterThan(0);
+  });
 });

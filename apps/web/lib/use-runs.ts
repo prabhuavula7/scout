@@ -19,6 +19,8 @@ export interface RunDetail {
     docsUrl: string | null;
     docsCrawlWarning?: string | null;
     understandingScopeWarning?: string | null;
+    crawlOptions?: { maxDepth: number; maxPages: number };
+    docUrls?: string[];
   };
   endpoints: Endpoint[];
   understanding: PlatformUnderstanding | null;
@@ -108,11 +110,32 @@ export function useRemoveRun() {
   });
 }
 
+const TERMINAL_STATUSES: RunSummary["status"][] = ["ready", "failed"];
+
 export function useRun(slug: string) {
   return useQuery({
     queryKey: ["run", slug],
     queryFn: () => request<RunDetail>(`/api/runs/${slug}`),
     enabled: !!slug,
+    // A run created via "New" redirects here while it's still importing/
+    // crawling/embedding in the background; without polling, this query
+    // fetches once and then never updates again (refetchOnWindowFocus is
+    // off globally), so the page would silently sit on whatever status it
+    // saw first, including "importing" forever after the run actually
+    // failed. Poll every 2s until the status is terminal, then stop.
+    refetchInterval: (query) => {
+      const status = query.state.data?.platform.status;
+      return status && TERMINAL_STATUSES.includes(status) ? false : 2000;
+    },
+  });
+}
+
+export function useRefreshRun(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { mode: "resynthesize" | "recrawl"; docsDepth?: number; docsMaxPages?: number }) =>
+      request<{ ok: true }>(`/api/runs/${slug}/refresh`, { method: "POST", body: JSON.stringify(input) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["run", slug] }),
   });
 }
 

@@ -114,6 +114,12 @@ export interface DocumentationAgentResult {
    * HTML shell. Surfaced to the caller so it can warn instead of silently
    * grounding answers in near-nothing. */
   thinPages: string[];
+  /** URLs that failed to fetch at all (404, DNS failure, timeout, etc),
+   * with the reason. A single bad page, especially one only discovered via
+   * recursive crawling rather than given directly by the user, shouldn't
+   * abort an otherwise-successful crawl of every other page; see the
+   * per-page try/catch below. */
+  failedPages: Array<{ url: string; error: string }>;
 }
 
 /**
@@ -136,6 +142,7 @@ export async function runDocumentationAgent(
 
   let chunksStored = 0;
   const thinPages: string[] = [];
+  const failedPages: Array<{ url: string; error: string }> = [];
   const visited = new Set<string>();
   const queue: Array<{ url: string; depth: number }> = urls.map((url) => ({ url: normalizeUrl(url), depth: 0 }));
 
@@ -144,7 +151,18 @@ export async function runDocumentationAgent(
     if (visited.has(url)) continue;
     visited.add(url);
 
-    const page = await crawlPage(url);
+    let page: CrawledPage;
+    try {
+      page = await crawlPage(url);
+    } catch (error) {
+      // One dead page, especially a link only discovered by following the
+      // site's own nav (not something the user typed in), shouldn't sink
+      // an otherwise-successful crawl of every other page. Skip it, record
+      // why, keep going.
+      failedPages.push({ url, error: error instanceof Error ? error.message : String(error) });
+      continue;
+    }
+
     const chunks = chunkDocument({
       markdown: page.markdown,
       sourceUrl: page.url,
@@ -164,5 +182,5 @@ export async function runDocumentationAgent(
     }
   }
 
-  return { pagesCrawled: visited.size, chunksStored, thinPages };
+  return { pagesCrawled: visited.size, chunksStored, thinPages, failedPages };
 }

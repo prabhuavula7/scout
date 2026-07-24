@@ -32,6 +32,10 @@ export interface PlatformRecord {
   lastDocsHash?: Record<string, string>;
   docsCrawlWarning?: string | null;
   understandingScopeWarning?: string | null;
+  /** The docsDepth/docsMaxPages this run was created (or last recrawled)
+   * with, so `scout watch` and refresh/recrawl reuse the user's actual
+   * settings instead of falling back to hardcoded defaults. */
+  crawlOptions?: { maxDepth: number; maxPages: number };
 }
 
 export interface ChatMessageRecord {
@@ -369,6 +373,10 @@ export class LocalFileStore implements AgentStore {
 
   async setDocUrls(docUrls: string[]): Promise<void> {
     await this.updatePlatform({ docUrls });
+  }
+
+  async setCrawlOptions(maxDepth: number, maxPages: number): Promise<void> {
+    await this.updatePlatform({ crawlOptions: { maxDepth, maxPages } });
   }
 
   /** Clears indexed doc chunks before a `scout watch`-triggered re-crawl, so refreshed docs replace stale ones instead of duplicating them. */

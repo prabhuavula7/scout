@@ -4,6 +4,22 @@ All notable changes to Scout are documented here. Format loosely follows [Keep a
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-24
+
+### Fixed
+
+- Documentation crawling no longer aborts an entire run when a single discovered link 404s (or any seed URL fails outright); the page is skipped and disclosed via the existing crawl-warning banner instead of failing the whole pipeline. Previously a real-world docs site with even one dead internal link (found only through recursive crawling, not the URL the user actually gave) would fail the run outright even though the user's own seed URL succeeded.
+- The run detail page (web app) now polls every 2s until a run reaches a terminal status (`ready`/`failed`), instead of fetching once and never updating again; previously a run that failed after the initial page load would silently keep showing its last-seen in-progress status with no visible failure.
+- `GET /api/runs/[slug]` no longer returns the full raw OpenAPI spec on every request (up to several MB for a large real-world API like Stripe); the frontend never used it, and the added 2s polling above made re-shipping it on every request pure waste.
+- `scout watch` now reuses the crawl depth/page-cap a run was actually created with, instead of silently falling back to hardcoded defaults on every triggered refresh.
+
+### Added
+
+- Understanding-synthesis scope raised to handle the large majority of real-world API surfaces: endpoint summaries 300 → 750, doc chunks 100 → 200. Default crawl settings also raised (depth 1 → 2, max pages 20 → 50, ceiling 100 → 200) to actually gather enough material to use the higher caps.
+- `scout refresh <slug>` (and a "Refresh" / "Recrawl docs" button on every run's page in the web app): regenerates a run's understanding without re-importing the spec. Plain `refresh` re-synthesizes from whatever's already crawled and stored (picks up the raised limits above immediately, no network calls); `--recrawl` also re-fetches the run's doc URLs first (needed when crawl depth/page-cap itself changed). Each run now remembers its own crawl settings so both this and `scout watch` reuse them instead of guessing.
+- A staged progress view on the Understanding page (Import spec → Crawl docs → Understand & synthesize) with a spinner and rotating status phrases, shown while a run is actively in progress instead of an indistinguishable "not generated yet" empty state.
+- Confirmed (already-working, now covered by an explicit concurrency check) that multiple runs can import/crawl/synthesize at the same time: `scout serve`'s run-creation endpoint was already fire-and-forget per request with no shared queue or lock, and each run lives in its own directory, so this was safe by construction rather than newly added.
+
 ## [1.0.0] - 2026-07-23
 
 Initial public release.

@@ -42,6 +42,22 @@ describe("GET /api/runs/[slug]", () => {
     const body = await response.json();
     expect(body.lastError).toBe("Failed to fetch docs page https://bad.example.com: HTTP 404");
   });
+
+  it("omits rawSpec from the response (the UI never renders it; can be multiple MB for a large real-world API)", async () => {
+    const { store, platformId } = await LocalFileStore.create("Big Spec Platform", "custom");
+    await store.applyImportResult(platformId, {
+      name: "Big Spec Platform",
+      baseUrl: "https://api.example.com",
+      authScheme: "bearer_token",
+      rawSpec: { openapi: "3.0.0", paths: { "/x": {} } },
+    });
+
+    const { GET } = await import("./route.js");
+    const response = await GET(new Request("http://localhost"), { params: Promise.resolve({ slug: "big-spec-platform" }) });
+    const body = await response.json();
+    expect(body.platform.rawSpec).toBeUndefined();
+    expect(body.platform.baseUrl).toBe("https://api.example.com");
+  });
 });
 
 describe("DELETE /api/runs/[slug]", () => {

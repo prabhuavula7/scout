@@ -6,9 +6,20 @@ import { runImportAgent } from "./import-agent.js";
 import { runDocumentationAgent, type CrawlOptions } from "./documentation-agent.js";
 import { runUnderstandingAgent, MAX_ENDPOINT_SUMMARIES, MAX_DOC_EXCERPTS } from "./understanding-agent.js";
 
-function thinPagesWarning(thinPages: string[]): string | null {
-  if (thinPages.length === 0) return null;
-  return `${thinPages.length} doc page(s) returned little to no extractable content, possibly JavaScript-rendered pages a static fetch can't execute: ${thinPages.join(", ")}. Grounded answers about those pages may be limited or missing.`;
+export function crawlWarning(thinPages: string[], failedPages: Array<{ url: string; error: string }>): string | null {
+  const parts: string[] = [];
+  if (failedPages.length > 0) {
+    parts.push(
+      `${failedPages.length} doc page(s) failed to crawl and were skipped: ${failedPages.map((f) => f.url).join(", ")}`,
+    );
+  }
+  if (thinPages.length > 0) {
+    parts.push(
+      `${thinPages.length} doc page(s) returned little to no extractable content, possibly JavaScript-rendered pages a static fetch can't execute: ${thinPages.join(", ")}`,
+    );
+  }
+  if (parts.length === 0) return null;
+  return `${parts.join(". ")}. Grounded answers about those pages may be limited or missing.`;
 }
 
 /**
@@ -18,7 +29,7 @@ function thinPagesWarning(thinPages: string[]): string | null {
  * fact instead of a silent gap, the same honesty principle the tool
  * already applies via "missingDocumentation" for the platform's own docs.
  */
-function scopeWarning(
+export function scopeWarning(
   endpointsTotal: number,
   endpointsUsed: number,
   chunksTotal: number,
@@ -70,7 +81,7 @@ export async function runCoordinator(
       const docResult = await runAgent(store, platformId, "documentation", { docUrls }, () =>
         runDocumentationAgent(store, llm, platformId, docUrls, crawlOptions),
       );
-      await store.setDocsCrawlWarning?.(platformId, thinPagesWarning(docResult.thinPages));
+      await store.setDocsCrawlWarning?.(platformId, crawlWarning(docResult.thinPages, docResult.failedPages));
     }
 
     await setStatus("embedding");

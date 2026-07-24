@@ -1,6 +1,6 @@
 {
   "name": "scoutcli",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": false,
   "description": "Understand any enterprise platform in minutes. Point Scout at an OpenAPI spec and docs, get an integration blueprint and a grounded chat assistant, all local.",
   "license": "MIT",

@@ -13,8 +13,8 @@ export function registerUnderstandCommand(program: Command): void {
     .description("Point Scout at an OpenAPI/Swagger spec (URL or local file) and generate an integration blueprint")
     .argument("<source>", "OpenAPI/Swagger spec URL, or a path to a local spec file")
     .option("--docs <url>", "documentation page to crawl for grounded chat (repeatable)", (v, prev: string[]) => [...prev, v], [] as string[])
-    .option("--docs-depth <n>", "hops of same-site links to follow past each --docs URL (0 = only the given URLs)", "1")
-    .option("--docs-max-pages <n>", "hard cap on total doc pages crawled, regardless of depth", "20")
+    .option("--docs-depth <n>", "hops of same-site links to follow past each --docs URL (0 = only the given URLs)", "2")
+    .option("--docs-max-pages <n>", "hard cap on total doc pages crawled, regardless of depth", "50")
     .option("--label <name>", "human-readable name for this run (defaults to the spec title or connector name)")
     .option("--connector <slug>", "known connector slug (see `scout connectors list`) to prefill label/docs")
     .option("--kind <kind>", "override source kind: openapi_url | openapi_raw | swagger_url")
@@ -53,6 +53,7 @@ export function registerUnderstandCommand(program: Command): void {
 
         const { store, platformId } = await LocalFileStore.create(label, connector?.slug ?? "custom");
         await store.setDocUrls(docUrls);
+        await store.setCrawlOptions(crawlOptions.maxDepth, crawlOptions.maxPages);
 
         if (docUrls.length > 0) {
           const estimate = await estimateCrawlCost(docUrls, crawlOptions);

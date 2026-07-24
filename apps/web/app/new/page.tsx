@@ -20,8 +20,8 @@ export default function NewRunPage() {
   const [docUrlsText, setDocUrlsText] = useState("");
   const [label, setLabel] = useState("");
   const [connectorSlug, setConnectorSlug] = useState("");
-  const [docsDepth, setDocsDepth] = useState(1);
-  const [docsMaxPages, setDocsMaxPages] = useState(20);
+  const [docsDepth, setDocsDepth] = useState(2);
+  const [docsMaxPages, setDocsMaxPages] = useState(50);
 
   function parsedDocUrls(): string[] {
     return docUrlsText
@@ -152,7 +152,7 @@ export default function NewRunPage() {
             <input
               type="number"
               min={1}
-              max={100}
+              max={200}
               value={docsMaxPages}
               onChange={(e) => setDocsMaxPages(Number(e.target.value))}
               className={`${inputClass} mt-1`}
