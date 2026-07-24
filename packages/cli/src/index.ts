@@ -17,7 +17,7 @@ const program = new Command();
 program
   .name("scout")
   .description("Understand any enterprise platform in minutes. Local, no login, no server.")
-  .version("1.1.2");
+  .version("1.1.3");
 
 registerUnderstandCommand(program);
 registerListCommand(program);

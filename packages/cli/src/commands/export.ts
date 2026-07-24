@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { LocalFileStore } from "@scout/store";
 import type { Resource } from "@scout/types";
 
-function toMarkdown(
+export function toMarkdown(
   name: string,
   understanding: NonNullable<Awaited<ReturnType<LocalFileStore["getUnderstanding"]>>>,
   resources: Resource[],

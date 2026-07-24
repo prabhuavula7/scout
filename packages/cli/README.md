@@ -70,7 +70,7 @@ Add to your MCP client's config (Claude Code, Claude Desktop, Cursor, Codex CLI)
 }
 ```
 
-Exposes `understand_platform`, `ask_platform`, and `list_platforms` as tools, so an agent can look up a platform's integration blueprint mid-task instead of a human running the CLI and pasting the output back in.
+Exposes the same tasks a human can do via the CLI or `scout serve`, as tools: `understand_platform`, `ask_platform`, `list_platforms`, `list_connectors`, `refresh_platform`, `export_platform`, `research_platform`, `remove_platform`. An agent can import a spec, chat with citations, refresh a stale run, export a blueprint, find further reading, and clean up, all mid-task instead of a human running the CLI and pasting output back in.
 
 ## Learn more
 

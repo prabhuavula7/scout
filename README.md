@@ -143,7 +143,7 @@ If nothing is configured at all, Scout falls back to `OPENAI_API_KEY` / `TAVILY_
 
 ## Using `scout mcp` with a coding agent
 
-`scout mcp` is a standard stdio MCP server (built on `@modelcontextprotocol/sdk`), exposing `understand_platform`, `ask_platform`, and `list_platforms`. Any MCP client that supports stdio servers can use it; setup is the same `command`/`args` shape everywhere, just in a different config file:
+`scout mcp` is a standard stdio MCP server (built on `@modelcontextprotocol/sdk`), giving an agent the same capabilities as the CLI/web app: `understand_platform`, `ask_platform`, `list_platforms`, `list_connectors`, `refresh_platform`, `export_platform`, `research_platform`, `remove_platform` (the last requires an explicit `confirm: true`, since it's irreversible). Any MCP client that supports stdio servers can use it; setup is the same `command`/`args` shape everywhere, just in a different config file:
 
 **Claude Code**
 ```

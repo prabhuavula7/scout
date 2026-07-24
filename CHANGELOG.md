@@ -4,6 +4,12 @@ All notable changes to Scout are documented here. Format loosely follows [Keep a
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-07-24
+
+### Added
+
+- `scout mcp` now exposes full CLI/web parity, not just a read-mostly subset: `refresh_platform`, `export_platform`, `research_platform`, `list_connectors`, and `remove_platform` (guarded by an explicit `confirm: true`, since it's irreversible) join the existing `understand_platform`/`ask_platform`/`list_platforms`. `understand_platform` also gained `docsDepth`/`docsMaxPages` and now persists its crawl settings via `setCrawlOptions`, matching what `scout understand` and the web "New" form already did (a run created over MCP previously fell back to undocumented pipeline defaults instead of the same tunable ones). Added `packages/cli/src/commands/mcp.test.ts`, which drives the server through a real in-memory MCP client/server transport pair (protocol handshake, tool discovery, tool calls) rather than calling the handler functions directly, verifying an MCP-speaking agent can actually do end-to-end what a human can do via the CLI or web UI.
+
 ## [1.1.2] - 2026-07-24
 
 ### Added
