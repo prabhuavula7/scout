@@ -26,8 +26,8 @@ COPY packages ./packages
 COPY apps ./apps
 RUN pnpm install --frozen-lockfile
 
-# Full default pipeline: builds @scout/web (bundled into scoutcli's dist/viewer)
-# then scoutcli itself. Same command CONTRIBUTING.md has contributors run.
+# Full default pipeline: builds @scout/web (bundled into @dotapk7/scoutcli's dist/viewer)
+# then @dotapk7/scoutcli itself. Same command CONTRIBUTING.md has contributors run.
 RUN pnpm build
 
 # ---- runtime: just the published CLI package's own footprint ----
@@ -37,7 +37,7 @@ ENV NODE_ENV=production
 
 # Real npm dependencies only (next/react/openai/@anthropic-ai/sdk/etc, see
 # packages/cli/tsup.config.ts's comments on why these can't stay bundled);
-# same install a real `npm install -g scoutcli` would do. devDependencies
+# same install a real `npm install -g @dotapk7/scoutcli` would do. devDependencies
 # still lists workspace:* references (meaningless outside the pnpm
 # workspace this was built from); a real registry install never looks at
 # devDependencies at all, but `npm install` run locally against this

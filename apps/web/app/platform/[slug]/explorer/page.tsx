@@ -22,5 +22,5 @@ export default function ExplorerPage({ params }: { params: Promise<{ slug: strin
     );
   }
 
-  return <EndpointList endpoints={run.endpoints} baseUrl={run.platform.baseUrl ?? ""} />;
+  return <EndpointList endpoints={run.endpoints} baseUrl={run.platform.baseUrl ?? ""} authScheme={run.platform.authScheme} />;
 }

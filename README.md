@@ -113,6 +113,8 @@ The same honesty extends to Scout's own limits, not just the platform's: synthes
 | `scout list` | List every run, most recently updated first. |
 | `scout rm <slug>` | Delete a run and everything under it. Prompts for confirmation unless `-y`/`--yes` is passed. |
 | `scout chat <slug>` | Terminal chat REPL, grounded in the crawled docs, with citations. |
+| `scout generate <slug> --lang ts\|py [--workflow <name>] [--out <path>]` | Generate a runnable starter script (auth handshake + one real read call) from the blueprint. v1 supports API-key-header, Bearer-token, and API-key-query auth with real templates; anything else (OAuth2, no endpoints, etc.) gets an honest stub instead of fabricated code. `--list-workflows` prints the run's available workflow names instead of generating. Real (non-stub) output is syntax-checked (`node --check`/`python3 -m py_compile`) before being returned -- proves the code parses, not that the API call succeeds. |
+| `scout diff <slug> [--json]` | Drift detection: show what changed in a run's understanding since its last refresh -- narrative sections that changed, plus workflows/data-model entities/pitfalls/integration opportunities added or removed. Uses the snapshot Scout already takes before every refresh, no new storage. |
 | `scout export <slug> --format md\|json` | Export the understanding (and any research results) as Markdown or JSON. |
 | `scout watch <slug>` | Poll the run's doc URLs, re-run the pipeline automatically when they change. |
 | `scout research <slug>` | Find related articles, tutorials, and use cases via a configured search provider (Tavily, SerpApi). |
@@ -143,7 +145,7 @@ If nothing is configured at all, Scout falls back to `OPENAI_API_KEY` / `TAVILY_
 
 ## Using `scout mcp` with a coding agent
 
-`scout mcp` is a standard stdio MCP server (built on `@modelcontextprotocol/sdk`), giving an agent the same capabilities as the CLI/web app: `understand_platform`, `ask_platform`, `list_platforms`, `list_connectors`, `refresh_platform`, `export_platform`, `research_platform`, `remove_platform` (the last requires an explicit `confirm: true`, since it's irreversible). Any MCP client that supports stdio servers can use it; setup is the same `command`/`args` shape everywhere, just in a different config file:
+`scout mcp` is a standard stdio MCP server (built on `@modelcontextprotocol/sdk`), giving an agent the same capabilities as the CLI/web app: `understand_platform`, `ask_platform`, `list_platforms`, `list_connectors`, `refresh_platform`, `diff_platform`, `generate_platform`, `export_platform`, `research_platform`, `remove_platform` (the last requires an explicit `confirm: true`, since it's irreversible). Any MCP client that supports stdio servers can use it; setup is the same `command`/`args` shape everywhere, just in a different config file:
 
 **Claude Code**
 ```

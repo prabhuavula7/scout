@@ -37,7 +37,7 @@ export function registerServeCommand(program: Command): void {
       if (!existsSync(path.join(viewerDir, ".next")) || !existsSync(nextBin)) {
         console.error(
           `Couldn't find the bundled viewer (expected ${viewerDir}/.next and ${nextBin}). ` +
-            "This build of scoutcli may be broken; try reinstalling, or if you're developing " +
+            "This build of @dotapk7/scoutcli may be broken; try reinstalling, or if you're developing " +
             "from source, run `pnpm build` from the repo root first.",
         );
         process.exitCode = 1;

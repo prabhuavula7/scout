@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { runChatAgent, runCoordinator, runRefresh, runResearchAgent } from "@scout/agents";
+import { diffUnderstanding, generateCode, parseAuthScheme, runChatAgent, runCoordinator, runRefresh, runResearchAgent, UnknownWorkflowError } from "@scout/agents";
 import { getConnector, loadConnectorRegistry } from "@scout/connectors";
 import { LocalFileStore } from "@scout/store";
 import type { ImportRequest } from "@scout/types";
@@ -192,6 +192,69 @@ export function createScoutMcpServer(): McpServer {
           isError: true,
           content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }],
         };
+      }
+    },
+  );
+
+  server.tool(
+    "diff_platform",
+    "Show what changed in a run's understanding since its last refresh (drift detection): narrative sections that changed, and workflows/data-model entities/pitfalls/integration opportunities added or removed. Useful before regenerating code with generate_platform, to know if anything about the platform actually changed.",
+    {
+      slug: z.string().describe("The run slug, see list_platforms"),
+    },
+    async ({ slug }) => {
+      const opened = await LocalFileStore.open(slug);
+      if (!opened) {
+        return { isError: true, content: [{ type: "text", text: `No run found for "${slug}".` }] };
+      }
+      const { store } = opened;
+      const understanding = await store.getUnderstanding();
+      if (!understanding) {
+        return { isError: true, content: [{ type: "text", text: `No understanding generated yet for "${slug}".` }] };
+      }
+      const previous = await store.getPreviousUnderstanding();
+      const diff = diffUnderstanding(previous, understanding);
+      return { content: [{ type: "text", text: JSON.stringify(diff, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "generate_platform",
+    "Generate a runnable starter script (auth handshake + one real read call) from a run's blueprint, in TypeScript or Python. Returns an honest stub instead of fabricated code when the run's auth scheme isn't yet supported for real codegen (v1: api_key_header, bearer_token only) or it has no read endpoints.",
+    {
+      slug: z.string().describe("The run slug, see list_platforms"),
+      lang: z.enum(["ts", "py"]).describe("Target language"),
+      workflow: z.string().optional().describe("A commonWorkflows name to target (defaults to the first workflow)"),
+    },
+    async ({ slug, lang, workflow }) => {
+      const opened = await LocalFileStore.open(slug);
+      if (!opened) {
+        return { isError: true, content: [{ type: "text", text: `No run found for "${slug}".` }] };
+      }
+      const { store } = opened;
+      const understanding = await store.getUnderstanding();
+      if (!understanding) {
+        return { isError: true, content: [{ type: "text", text: `No understanding generated yet for "${slug}".` }] };
+      }
+      const endpoints = await store.getEndpoints();
+      const platform = await store.getPlatform();
+
+      try {
+        const result = await generateCode(
+          understanding,
+          endpoints,
+          { name: platform.name, slug: store.slug, baseUrl: platform.baseUrl, authScheme: parseAuthScheme(platform.authScheme) },
+          workflow === undefined ? { lang } : { lang, workflow },
+        );
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      } catch (error) {
+        if (error instanceof UnknownWorkflowError) {
+          return {
+            isError: true,
+            content: [{ type: "text", text: JSON.stringify({ error: error.message, validNames: error.validNames }, null, 2) }],
+          };
+        }
+        throw error;
       }
     },
   );

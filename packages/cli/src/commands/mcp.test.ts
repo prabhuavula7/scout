@@ -13,6 +13,7 @@ import { LocalFileStore } from "@scout/store";
 // only pieces of "understand"/"refresh"/"research" that touch an LLM or web
 // search provider, so those three are the only mocks here.
 const fakeUnderstanding = {
+  platformId: "00000000-0000-0000-0000-000000000000",
   summary: "s",
   architectureOverview: "a",
   authenticationFlow: "auth",
@@ -25,6 +26,8 @@ const fakeUnderstanding = {
   potentialPitfalls: [],
   missingDocumentation: [],
   securityObservations: [],
+  citations: [],
+  generatedAt: new Date().toISOString(),
 };
 
 vi.mock("../config.js", () => ({
@@ -84,7 +87,9 @@ describe("scout mcp server (end-to-end over the MCP protocol)", () => {
     expect(names).toEqual(
       [
         "ask_platform",
+        "diff_platform",
         "export_platform",
+        "generate_platform",
         "list_connectors",
         "list_platforms",
         "refresh_platform",
@@ -124,12 +129,72 @@ describe("scout mcp server (end-to-end over the MCP protocol)", () => {
     const researchResult = await client.callTool({ name: "research_platform", arguments: { slug } });
     expect(researchResult.isError).toBeTruthy(); // no search provider configured, mirrors the CLI's own behavior
 
+    // This run has zero stored endpoints (runCoordinator is mocked above, so it never calls
+    // insertEndpoints) -- exercises generate_platform's honest-stub path, not the happy path.
+    const generateStubResult = await client.callTool({ name: "generate_platform", arguments: { slug, lang: "ts" } });
+    expect(generateStubResult.isError).toBeFalsy();
+    const generateStubPayload = JSON.parse(firstText(generateStubResult));
+    expect(generateStubPayload.isStub).toBe(true);
+    expect(generateStubPayload.stubReason).toBe("no-endpoints-available");
+
     const removeResult = await client.callTool({ name: "remove_platform", arguments: { slug, confirm: false } });
     expect(removeResult.isError).toBeTruthy();
 
     const confirmedRemoveResult = await client.callTool({ name: "remove_platform", arguments: { slug, confirm: true } });
     expect(confirmedRemoveResult.isError).toBeFalsy();
     expect(await LocalFileStore.open(slug)).toBeNull();
+  });
+
+  it("generate_platform produces a real runnable script when auth + a read endpoint are actually present", async () => {
+    const { store, platformId } = await LocalFileStore.create("Real API", "custom");
+    await store.applyImportResult(platformId, {
+      name: "Real API",
+      baseUrl: "https://api.real.test",
+      authScheme: "bearer_token",
+      rawSpec: null,
+    });
+    await store.insertEndpoints(platformId, [
+      {
+        group: "widgets",
+        method: "GET",
+        path: "/widgets",
+        summary: "List widgets",
+        description: null,
+        parameters: [],
+        requestBodySchema: null,
+        responseSchema: null,
+        exampleRequest: null,
+        exampleResponse: null,
+      },
+    ]);
+    await store.upsertUnderstanding(platformId, fakeUnderstanding);
+
+    const client = await connectedClient();
+    const result = await client.callTool({ name: "generate_platform", arguments: { slug: store.slug, lang: "py" } });
+    expect(result.isError).toBeFalsy();
+    const payload = JSON.parse(firstText(result));
+    expect(payload.isStub).toBe(false);
+    expect(payload.code).toContain("import requests");
+    expect(payload.code).toContain("REAL_API_API_KEY");
+  });
+
+  it("diff_platform reports no prior snapshot for a fresh run, then real drift after a second understanding is stored", async () => {
+    const { store, platformId } = await LocalFileStore.create("Diffable API", "custom");
+    await store.upsertUnderstanding(platformId, fakeUnderstanding);
+
+    const client = await connectedClient();
+    const firstDiff = await client.callTool({ name: "diff_platform", arguments: { slug: store.slug } });
+    expect(JSON.parse(firstText(firstDiff)).hasPriorSnapshot).toBe(false);
+
+    await store.upsertUnderstanding(platformId, {
+      ...fakeUnderstanding,
+      commonWorkflows: [{ name: "A brand new workflow", steps: ["step"] }],
+    });
+
+    const secondDiff = await client.callTool({ name: "diff_platform", arguments: { slug: store.slug } });
+    const diffPayload = JSON.parse(firstText(secondDiff));
+    expect(diffPayload.hasPriorSnapshot).toBe(true);
+    expect(diffPayload.workflowsAdded).toEqual(["A brand new workflow"]);
   });
 
   it("list_connectors returns the real bundled connector registry", async () => {

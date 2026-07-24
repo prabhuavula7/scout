@@ -1,0 +1,414 @@
+import { execFile } from "node:child_process";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { promisify } from "node:util";
+import { AuthScheme, type Endpoint, type PlatformUnderstanding } from "@scout/types";
+
+const execFileAsync = promisify(execFile);
+
+export type GenerateLang = "ts" | "py";
+
+export interface GeneratedCode {
+  code: string;
+  isStub: boolean;
+  stubReason?: string;
+  workflowUsed: string | null;
+  /** True iff the generated code was actually parsed/compiled and found syntactically valid. False for stubs, or when validation itself couldn't run (see syntaxValidationNote). This only proves the code parses -- not that the API call it makes will succeed. */
+  syntaxValidated: boolean;
+  /** Set when syntaxValidated is false for a real (non-stub) script: either the real syntax error found, or why validation was skipped (e.g. no python3 on PATH). */
+  syntaxValidationNote?: string;
+  /** A `.env.example` snippet naming the env var the script reads its key from. Set only for real (non-stub) scripts. */
+  envExample?: string;
+}
+
+export interface GenerateCodeOptions {
+  lang: GenerateLang;
+  /** A `commonWorkflows[].name` value. Omit to use the first workflow. */
+  workflow?: string;
+}
+
+export interface GenerateCodePlatform {
+  name: string;
+  slug: string;
+  baseUrl: string | null;
+  authScheme: AuthScheme | null;
+}
+
+/** Thrown when `options.workflow` doesn't match any `commonWorkflows[].name`. */
+export class UnknownWorkflowError extends Error {
+  constructor(public readonly validNames: string[]) {
+    super(
+      validNames.length > 0
+        ? `Unknown workflow. Valid names: ${validNames.join(", ")}`
+        : "Unknown workflow, and this run has no named workflows.",
+    );
+    this.name = "UnknownWorkflowError";
+  }
+}
+
+/** v1 only produces real (non-stub) templates for these; everything else stubs. */
+const SUPPORTED_AUTH_SCHEMES: ReadonlySet<AuthScheme> = new Set(["api_key_header", "bearer_token", "api_key_query"]);
+
+const RESERVED_IDENTIFIERS = new Set([
+  "class", "function", "return", "import", "export", "default", "await", "async",
+  "def", "lambda", "yield", "from", "as", "with", "del", "pass", "raise", "try",
+  "except", "finally", "global", "nonlocal", "in", "is", "not", "and", "or", "if",
+  "elif", "else", "for", "while", "break", "continue", "print", "type", "const",
+  "let", "var", "new", "this", "super", "void", "null", "true", "false", "typeof",
+  "instanceof", "interface", "enum", "implements", "extends", "static", "public",
+  "private", "protected", "package",
+]);
+
+/**
+ * Every string below flows from an imported OpenAPI spec (platform.name,
+ * endpoint.path, parameter names, response-schema keys) or LLM-synthesized
+ * output (workflow names) -- none of it is trusted input, since importing
+ * arbitrary third-party specs is Scout's core use case. Without escaping,
+ * an embedded newline in any of these breaks out of a `//`/`#` line comment
+ * (turning the rest of the attacker's string into live code in the
+ * generated file), and an embedded `"` or newline in a value placed inside
+ * a `"..."` string literal breaks out of that literal the same way.
+ * `node --check`/`python3 -m py_compile` only prove the *result* parses --
+ * they provide no defense if the injected payload is itself valid syntax,
+ * which the attacker fully controls. These two helpers are the only
+ * sanctioned way spec/LLM-derived text may reach the generated output.
+ */
+function sanitizeForComment(value: string): string {
+  return value.replace(/[\r\n]+/g, " ");
+}
+
+function escapeForStringLiteral(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r/g, "\\r").replace(/\n/g, "\\n");
+}
+
+/** Normalizes a real-spec field name into a valid TS/Python identifier. */
+export function toIdentifier(raw: string): string {
+  let id = raw.replace(/[^a-zA-Z0-9_$]/g, "_");
+  if (/^[0-9]/.test(id)) id = `_${id}`;
+  if (id.length === 0) id = "_field";
+  if (RESERVED_IDENTIFIERS.has(id)) id = `${id}_`;
+  return id;
+}
+
+/** Safely narrows a stored platform record's loosely-typed authScheme string into the AuthScheme union, since the store persists it as a plain string. */
+export function parseAuthScheme(value: string | null): AuthScheme | null {
+  if (value === null) return null;
+  const result = AuthScheme.safeParse(value);
+  return result.success ? result.data : null;
+}
+
+/** Derives the env var name a generated script reads its API key from. */
+export function envVarName(slug: string): string {
+  const normalized = slug
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return `${normalized || "SCOUT_PLATFORM"}_API_KEY`;
+}
+
+/** A `.env.example` snippet for the env var a generated script reads its key from. */
+export function envExampleFor(platform: GenerateCodePlatform): string {
+  return `# ${sanitizeForComment(platform.name)} -- generated by \`scout generate\`\n${envVarName(platform.slug)}=\n`;
+}
+
+function stub(lang: GenerateLang, workflowUsed: string | null, stubReason: string): GeneratedCode {
+  const c = lang === "ts" ? "//" : "#";
+  const code = [
+    `${c} Scout could not generate a runnable script for this run.`,
+    `${c} Reason: ${stubReason}`,
+    `${c} This is an honest placeholder, not a real integration. Run \`scout export <slug>\` for the full blueprint.`,
+  ].join("\n");
+  return { code, isStub: true, stubReason, workflowUsed, syntaxValidated: false };
+}
+
+/**
+ * Syntax-checks generated code with whatever the runtime already has:
+ * `node --check` (via this process's own execPath, always available since
+ * Scout itself runs on Node) for TypeScript/JS, `python3 -m py_compile` for
+ * Python. Proves the code parses, nothing about whether the API call it
+ * makes actually succeeds. If python3 isn't on PATH, this degrades to
+ * "skipped" rather than a hard failure -- codegen must not depend on a
+ * Python install existing.
+ */
+async function validateSyntax(code: string, lang: GenerateLang): Promise<{ validated: boolean; note?: string }> {
+  const tmpFile = path.join(os.tmpdir(), `scout-generate-${Date.now()}-${Math.random().toString(36).slice(2)}.${lang === "ts" ? "js" : "py"}`);
+  try {
+    await fs.writeFile(tmpFile, code, "utf-8");
+  } catch (error) {
+    // Not a syntax problem with the generated code -- the local environment
+    // couldn't even write a temp file (full/unwritable tmpdir, etc).
+    const message = error instanceof Error ? error.message : String(error);
+    return { validated: false, note: `Couldn't run the syntax check: ${message.split("\n")[0]}` };
+  }
+
+  try {
+    if (lang === "ts") {
+      await execFileAsync(process.execPath, ["--check", tmpFile]);
+    } else {
+      try {
+        await execFileAsync("python3", ["-m", "py_compile", tmpFile]);
+      } catch (error) {
+        if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+          return { validated: false, note: "python3 not found on PATH -- syntax check skipped" };
+        }
+        throw error;
+      }
+    }
+    return { validated: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { validated: false, note: `Syntax check failed: ${message.split("\n")[0]}` };
+  } finally {
+    await fs.unlink(tmpFile).catch(() => undefined);
+  }
+}
+
+function stepMentionsEndpoint(step: string, endpoint: Endpoint): boolean {
+  const lower = step.toLowerCase();
+  return lower.includes(endpoint.method.toLowerCase()) && lower.includes(endpoint.path.toLowerCase());
+}
+
+/** Picks a read-only (GET) endpoint: prefers one mentioned in the chosen workflow's steps, in step order, else the first GET endpoint overall. */
+function selectReadEndpoint(endpoints: Endpoint[], workflow?: { steps: string[] }): Endpoint | undefined {
+  const getEndpoints = endpoints.filter((e) => e.method === "GET");
+  if (getEndpoints.length === 0) return undefined;
+  if (workflow) {
+    for (const step of workflow.steps) {
+      const match = getEndpoints.find((e) => stepMentionsEndpoint(step, e));
+      if (match) return match;
+    }
+  }
+  return getEndpoints[0];
+}
+
+interface UrlPlan {
+  template: string;
+  pathPlaceholders: string[];
+}
+
+function planUrl(baseUrl: string | null, endpoint: Endpoint): UrlPlan {
+  const base = (baseUrl ?? "https://api.example.com").replace(/\/$/, "");
+  const pathPlaceholders = endpoint.parameters
+    .filter((p) => p.in === "path" && endpoint.path.includes(`{${p.name}}`))
+    .map((p) => p.name);
+  return { template: `${base}${endpoint.path}`, pathPlaceholders };
+}
+
+interface ResponseField {
+  raw: string;
+  identifier: string;
+}
+
+/** Pulls field names off the real spec (response schema, falling back to an example response) for display in generated code. */
+function extractResponseFields(endpoint: Endpoint): ResponseField[] {
+  const keys = objectKeys(endpoint.responseSchema) ?? objectKeys(endpoint.exampleResponse) ?? [];
+  return keys.map((raw) => ({ raw, identifier: toIdentifier(raw) }));
+}
+
+/** JSON-Schema keywords, never real API field names -- if every key on an object is one of these, it's schema metadata (or an unresolved shape we can't see through), not actual data. */
+const SCHEMA_METADATA_KEYS = new Set([
+  "type", "items", "$ref", "description", "required", "additionalProperties",
+  "format", "enum", "default", "example", "title", "properties", "allOf",
+  "anyOf", "oneOf", "nullable",
+]);
+
+/**
+ * Extracts real field names from a response schema/example, without
+ * fabricating plausible-looking-but-fake ones from shapes we can't
+ * actually see through: an unresolved `$ref` (import-agent never
+ * dereferences these), or a schema whose keys are themselves schema
+ * metadata rather than real object properties.
+ */
+function objectKeys(value: Record<string, unknown> | null): string[] | null {
+  if (!value) return null;
+  if ("$ref" in value) return null;
+  const properties = value.properties;
+  if (properties && typeof properties === "object") return Object.keys(properties as Record<string, unknown>);
+  if (value.type === "array" && value.items && typeof value.items === "object") {
+    return objectKeys(value.items as Record<string, unknown>);
+  }
+  const keys = Object.keys(value);
+  if (keys.length === 0) return null;
+  if (keys.every((k) => SCHEMA_METADATA_KEYS.has(k))) return null;
+  return keys;
+}
+
+function renderTypeScript(
+  platform: GenerateCodePlatform,
+  endpoint: Endpoint,
+  urlPlan: UrlPlan,
+  fields: ResponseField[],
+  blueprintSection: string,
+): string {
+  const envVar = envVarName(platform.slug);
+  const isQueryAuth = platform.authScheme === "api_key_query";
+
+  const placeholderLines = urlPlan.pathPlaceholders
+    .map(
+      (name) =>
+        `  url = url.replace("{${escapeForStringLiteral(name)}}", "<${escapeForStringLiteral(name.toUpperCase())}>"); // TODO: fill in a real ${sanitizeForComment(name)}`,
+    )
+    .join("\n");
+
+  const queryAuthLine = isQueryAuth
+    ? `  url += (url.includes("?") ? "&" : "?") + \`api_key=\${apiKey}\`; // adjust the query param name if this platform uses a different one -- see the blueprint's Authentication Flow section\n`
+    : "";
+
+  const fetchOptionsBlock = isQueryAuth
+    ? `{\n    method: "${endpoint.method}",\n  }`
+    : `{\n    method: "${endpoint.method}",\n    headers: {\n      ${
+        platform.authScheme === "bearer_token"
+          ? `Authorization: \`Bearer \${apiKey}\`,`
+          : `"X-API-Key": apiKey, // adjust header name if this platform uses a different one -- see the blueprint's Authentication Flow section`
+      }\n    },\n  }`;
+
+  const safeBlueprintSection = sanitizeForComment(blueprintSection);
+  const fieldComment =
+    fields.length > 0
+      ? `// From blueprint: ${safeBlueprintSection} -- expected response fields\n// ${fields
+          .map((f) => (f.identifier !== f.raw ? `${f.identifier} (raw field: "${sanitizeForComment(f.raw)}")` : f.identifier))
+          .join(", ")}\n\n`
+      : "";
+
+  return `// Generated by Scout from the "${sanitizeForComment(platform.name)}" integration blueprint.
+// From blueprint: Authentication Flow
+const apiKey = process.env.${envVar};
+if (!apiKey) {
+  throw new Error("Set ${envVar} before running this script.");
+}
+
+${fieldComment}// From blueprint: ${safeBlueprintSection}
+async function main() {
+  let url = "${escapeForStringLiteral(urlPlan.template)}";
+${placeholderLines}
+${queryAuthLine}  const response = await fetch(url, ${fetchOptionsBlock});
+  if (!response.ok) {
+    throw new Error(\`Request failed: \${response.status} \${response.statusText}\`);
+  }
+  const data = await response.json();
+  console.log(data);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+`;
+}
+
+function renderPython(
+  platform: GenerateCodePlatform,
+  endpoint: Endpoint,
+  urlPlan: UrlPlan,
+  fields: ResponseField[],
+  blueprintSection: string,
+): string {
+  const envVar = envVarName(platform.slug);
+  const isQueryAuth = platform.authScheme === "api_key_query";
+
+  const placeholderLines = urlPlan.pathPlaceholders
+    .map(
+      (name) =>
+        `    url = url.replace("{${escapeForStringLiteral(name)}}", "<${escapeForStringLiteral(name.toUpperCase())}>")  # TODO: fill in a real ${sanitizeForComment(name)}`,
+    )
+    .join("\n");
+
+  const requestArgsBlock = isQueryAuth
+    ? `        params={"api_key": api_key},  # adjust the query param name if this platform uses a different one -- see the blueprint's Authentication Flow section\n`
+    : `        headers={\n            ${
+        platform.authScheme === "bearer_token"
+          ? `"Authorization": f"Bearer {api_key}",`
+          : `"X-API-Key": api_key,  # adjust header name if this platform uses a different one -- see the blueprint's Authentication Flow section`
+      }\n        },\n`;
+
+  const safeBlueprintSection = sanitizeForComment(blueprintSection);
+  const fieldComment =
+    fields.length > 0
+      ? `# From blueprint: ${safeBlueprintSection} -- expected response fields\n# ${fields
+          .map((f) => (f.identifier !== f.raw ? `${f.identifier} (raw field: "${sanitizeForComment(f.raw)}")` : f.identifier))
+          .join(", ")}\n\n`
+      : "";
+
+  return `# Generated by Scout from the "${sanitizeForComment(platform.name)}" integration blueprint.
+import os
+import requests
+
+# From blueprint: Authentication Flow
+api_key = os.environ.get("${envVar}")
+if not api_key:
+    raise RuntimeError("Set ${envVar} before running this script.")
+
+${fieldComment}# From blueprint: ${safeBlueprintSection}
+def main():
+    url = "${escapeForStringLiteral(urlPlan.template)}"
+${placeholderLines}
+    response = requests.get(
+        url,
+${requestArgsBlock}    )
+    response.raise_for_status()
+    print(response.json())
+
+
+if __name__ == "__main__":
+    main()
+`;
+}
+
+/**
+ * Turns an already-synthesized understanding + stored endpoints into a
+ * runnable starter script (auth handshake + one real read call), or an
+ * honest stub when the run can't support that yet. No network calls and no
+ * dependency on the local run store -- the CLI command, MCP tool, and web
+ * route all call into this. Async only for the syntax-validation step at
+ * the end (spawns `node --check`/`python3 -m py_compile` against a temp
+ * file); code generation itself is synchronous.
+ */
+export async function generateCode(
+  understanding: PlatformUnderstanding,
+  endpoints: Endpoint[],
+  platform: GenerateCodePlatform,
+  options: GenerateCodeOptions,
+): Promise<GeneratedCode> {
+  const { lang } = options;
+
+  let workflow: { name: string; steps: string[] } | undefined;
+  if (options.workflow !== undefined) {
+    workflow = understanding.commonWorkflows.find((w) => w.name === options.workflow);
+    if (!workflow) {
+      throw new UnknownWorkflowError(understanding.commonWorkflows.map((w) => w.name));
+    }
+  } else {
+    workflow = understanding.commonWorkflows[0];
+  }
+  const workflowUsed = workflow?.name ?? null;
+
+  if (endpoints.length === 0) {
+    return stub(lang, workflowUsed, "no-endpoints-available");
+  }
+
+  const authSupported = platform.authScheme !== null && SUPPORTED_AUTH_SCHEMES.has(platform.authScheme);
+  if (!authSupported) {
+    return stub(lang, workflowUsed, `unsupported-auth-scheme:${platform.authScheme ?? "none"}`);
+  }
+
+  const endpoint = selectReadEndpoint(endpoints, workflow);
+  if (!endpoint) {
+    return stub(lang, workflowUsed, "no-read-endpoint-available");
+  }
+
+  const urlPlan = planUrl(platform.baseUrl, endpoint);
+  const fields = extractResponseFields(endpoint);
+  const blueprintSection = workflowUsed ?? `${endpoint.method} ${endpoint.path}`;
+
+  const code =
+    lang === "ts"
+      ? renderTypeScript(platform, endpoint, urlPlan, fields, blueprintSection)
+      : renderPython(platform, endpoint, urlPlan, fields, blueprintSection);
+
+  const { validated, note } = await validateSyntax(code, lang);
+  const envExample = envExampleFor(platform);
+  return note === undefined
+    ? { code, isStub: false, workflowUsed, syntaxValidated: validated, envExample }
+    : { code, isStub: false, workflowUsed, syntaxValidated: validated, syntaxValidationNote: note, envExample };
+}

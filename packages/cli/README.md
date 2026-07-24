@@ -34,7 +34,9 @@ Prefer a browser to a terminal? Skip straight to `scout serve` and add a provide
 | `scout list` / `scout rm <slug>` | List every run, or delete one and everything under it. |
 | `scout chat <slug>` | Terminal chat REPL, grounded in the crawled docs, with citations. |
 | `scout refresh <slug> [--recrawl]` | Regenerate a run's understanding without re-importing the spec; `--recrawl` also re-fetches its doc URLs first. |
+| `scout diff <slug> [--json]` | Show what changed in a run's understanding since its last refresh: narrative sections that changed, and workflows/data-model entities/pitfalls/integration opportunities added or removed. |
 | `scout export <slug> --format md\|json` | Export the understanding as Markdown or JSON. |
+| `scout generate <slug> --lang ts\|py [--workflow <name>] [--out <path>]` | Generate a runnable starter script (auth handshake + one real read call) from the blueprint. Falls back to an honest stub, not fabricated code, when the run's auth scheme isn't yet supported (v1: API-key-header, Bearer token, API-key-query) or it has no read endpoints. `--list-workflows` prints available workflow names instead of generating. Real (non-stub) output is syntax-checked (`node --check`/`python3 -m py_compile`) before being returned. |
 | `scout watch <slug>` | Poll the run's doc URLs, re-run the pipeline automatically when they change. |
 | `scout research <slug>` | Find related articles and tutorials via a configured search provider. |
 | `scout serve` | Start the local web viewer at `127.0.0.1` (no login, not reachable from outside the machine by default). |
@@ -70,7 +72,7 @@ Add to your MCP client's config (Claude Code, Claude Desktop, Cursor, Codex CLI)
 }
 ```
 
-Exposes the same tasks a human can do via the CLI or `scout serve`, as tools: `understand_platform`, `ask_platform`, `list_platforms`, `list_connectors`, `refresh_platform`, `export_platform`, `research_platform`, `remove_platform`. An agent can import a spec, chat with citations, refresh a stale run, export a blueprint, find further reading, and clean up, all mid-task instead of a human running the CLI and pasting output back in.
+Exposes the same tasks a human can do via the CLI or `scout serve`, as tools: `understand_platform`, `ask_platform`, `list_platforms`, `list_connectors`, `refresh_platform`, `diff_platform`, `generate_platform`, `export_platform`, `research_platform`, `remove_platform`. An agent can import a spec, chat with citations, refresh a stale run, check what changed, generate a starter script, export a blueprint, find further reading, and clean up, all mid-task instead of a human running the CLI and pasting output back in.
 
 ## Learn more
 

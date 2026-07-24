@@ -13,5 +13,5 @@ coverage/
 .vercel/
 pnpm-lock.yaml.bak
 .gstack/
-# npm pack output (e.g. from testing the published scoutcli package locally)
+# npm pack output (e.g. from testing the published @dotapk7/scoutcli package locally)
 *.tgz

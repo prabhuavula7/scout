@@ -277,6 +277,16 @@ export class LocalFileStore implements AgentStore {
     return readJson<PlatformUnderstanding | null>(path.join(this.dir, "understanding.json"), null);
   }
 
+  /** The understanding as of just before the most recent refresh/re-synthesis, for drift detection. Null if this run has never been refreshed (only one understanding has ever existed). */
+  async getPreviousUnderstanding(): Promise<PlatformUnderstanding | null> {
+    const dir = historyDir(this.slug);
+    const entries = await fs.readdir(dir).catch(() => [] as string[]);
+    const jsonFiles = entries.filter((f) => f.endsWith(".json")).sort();
+    const latest = jsonFiles.at(-1);
+    if (!latest) return null;
+    return readJson<PlatformUnderstanding | null>(path.join(dir, latest), null);
+  }
+
   async upsertUnderstanding(platformId: string, data: PlatformUnderstanding): Promise<void> {
     const previous = await this.getUnderstanding();
     if (previous) {

@@ -31,7 +31,7 @@ export default defineConfig({
     // scout serve ships apps/web's built .next output inside the npm
     // package, and runs it via `next start`. `next`/`react`/`react-dom` are
     // real dependencies of this package (see package.json) rather than
-    // pnpm workspace links, so a plain `npm install -g scoutcli` resolves
+    // pnpm workspace links, so a plain `npm install -g @dotapk7/scoutcli` resolves
     // them the normal way, no symlink/standalone-output gymnastics needed;
     // API route handlers are already fully bundled into .next/server/**.js
     // by Next's own webpack build, same as any other Next.js production

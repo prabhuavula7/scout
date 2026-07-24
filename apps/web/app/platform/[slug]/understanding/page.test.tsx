@@ -94,4 +94,26 @@ describe("UnderstandingPage", () => {
 
     expect(await screen.findByText("No search provider configured.")).toBeInTheDocument();
   });
+
+  it("generates starter code when clicked, and shows the honest-stub warning when the run can't support a real script", async () => {
+    const fetchMock = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/generate")) {
+        return {
+          ok: true,
+          json: async () => ({ code: "// stub code", isStub: true, stubReason: "no-endpoints-available", workflowUsed: null }),
+        };
+      }
+      return { ok: true, json: async () => RUN_WITH_UNDERSTANDING };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderWithQueryClient("some-platform");
+    await screen.findByText("A test summary.");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /generate starter script/i }));
+
+    expect(await screen.findByText(/no-endpoints-available/)).toBeInTheDocument();
+    expect(screen.getByText("// stub code")).toBeInTheDocument();
+  });
 });

@@ -1,9 +1,9 @@
 "use client";
 
-import { use } from "react";
-import { BrainCircuit, Search } from "lucide-react";
+import { use, useState } from "react";
+import { BrainCircuit, Code2, Search } from "lucide-react";
 import { EmptyState } from "@scout/ui";
-import { useRun, useRunResearch } from "@/lib/use-runs";
+import { useGenerateCode, useRun, useRunResearch } from "@/lib/use-runs";
 import { MermaidDiagram } from "@/components/mermaid-diagram";
 import { TableOfContents } from "@/components/table-of-contents";
 import { PipelineProgress } from "@/components/pipeline-progress";
@@ -36,6 +36,7 @@ const SECTIONS = [
   { id: "data-model", label: "Data model" },
   { id: "entity-relationships", label: "Entity relationships" },
   { id: "common-workflows", label: "Common workflows" },
+  { id: "starter-code", label: "Starter code" },
   { id: "sequence-diagram", label: "Sequence diagram" },
   { id: "integration-opportunities", label: "Integration opportunities" },
   { id: "potential-pitfalls", label: "Potential pitfalls" },
@@ -48,6 +49,8 @@ export default function UnderstandingPage({ params }: { params: Promise<{ slug: 
   const { slug } = use(params);
   const { data: run, isLoading } = useRun(slug);
   const research = useRunResearch(slug);
+  const generate = useGenerateCode(slug);
+  const [lang, setLang] = useState<"ts" | "py">("ts");
   const understanding = run?.understanding;
   const resources = run?.resources ?? [];
 
@@ -105,6 +108,74 @@ export default function UnderstandingPage({ params }: { params: Promise<{ slug: 
               </div>
             ))}
           </div>
+        </Section>
+        <Section id="starter-code" title="Starter code">
+          <div className="flex items-center gap-2">
+            <div className="flex overflow-hidden rounded-lg border border-stone-200 dark:border-stone-800">
+              {(["ts", "py"] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    // Switching languages without this leaves the previously-generated
+                    // code on screen with a caption now describing the *new* lang
+                    // selection (e.g. TS code shown under a "python3 -m py_compile"
+                    // label) until the user clicks Generate again. Reset so stale
+                    // code disappears the moment the language choice no longer matches it.
+                    setLang(option);
+                    generate.reset();
+                  }}
+                  className={`px-3 py-1.5 text-xs font-medium transition ${
+                    lang === option
+                      ? "bg-stone-900 text-stone-50 dark:bg-stone-100 dark:text-stone-900"
+                      : "text-stone-700 hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-900"
+                  }`}
+                >
+                  {option === "ts" ? "TypeScript" : "Python"}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => generate.mutate({ lang })}
+              disabled={generate.isPending}
+              className="flex items-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-stone-50 disabled:opacity-50 dark:border-stone-800 dark:text-stone-300 dark:hover:bg-stone-900"
+            >
+              <Code2 className="h-3 w-3" strokeWidth={2} />
+              {generate.isPending ? "Generating…" : "Generate starter script"}
+            </button>
+          </div>
+          {generate.isError && (
+            <p className="mt-2 text-xs text-red-600 dark:text-red-400">{(generate.error as Error).message}</p>
+          )}
+          {generate.data?.isStub && (
+            <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+              <p>
+                Couldn&apos;t generate a real script for this run ({generate.data.stubReason}). Showing an honest
+                placeholder instead of fabricated code.
+              </p>
+            </div>
+          )}
+          {generate.data && !generate.data.isStub && (
+            <p className="mt-3 text-xs text-stone-500">
+              {generate.data.syntaxValidated
+                ? `Syntax validated (${lang === "ts" ? "node --check" : "python3 -m py_compile"}) -- not tested against the live API.`
+                : `Syntax not validated (${generate.data.syntaxValidationNote ?? "unknown reason"}).`}
+            </p>
+          )}
+          {generate.data && (
+            <pre className="mt-3 overflow-x-auto rounded-lg border border-stone-200 bg-stone-50 p-4 text-xs dark:border-stone-800 dark:bg-stone-900">
+              <code>{generate.data.code}</code>
+            </pre>
+          )}
+          {generate.data?.envExample && (
+            <>
+              <p className="mt-3 text-xs font-medium text-stone-500">.env.example</p>
+              <pre className="mt-1 overflow-x-auto rounded-lg border border-stone-200 bg-stone-50 p-4 text-xs dark:border-stone-800 dark:bg-stone-900">
+                <code>{generate.data.envExample}</code>
+              </pre>
+            </>
+          )}
         </Section>
         <Section id="sequence-diagram" title="Sequence diagram">
           <MermaidDiagram chart={understanding.mermaidSequenceDiagram} />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Citation, ChatRole, Endpoint, PlatformUnderstanding, Resource } from "@scout/types";
+import type { AuthScheme, Citation, ChatRole, Endpoint, PlatformUnderstanding, Resource } from "@scout/types";
 import type { PlatformStatus } from "@scout/ui";
 
 export interface RunSummary {
@@ -17,6 +17,7 @@ export interface RunDetail {
   platform: RunSummary & {
     baseUrl: string | null;
     docsUrl: string | null;
+    authScheme: AuthScheme | null;
     docsCrawlWarning?: string | null;
     understandingScopeWarning?: string | null;
     crawlOptions?: { maxDepth: number; maxPages: number };
@@ -144,6 +145,23 @@ export function useRunResearch(slug: string) {
   return useMutation({
     mutationFn: () => request<Resource[]>(`/api/runs/${slug}/research`, { method: "POST" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["run", slug] }),
+  });
+}
+
+export interface GeneratedCode {
+  code: string;
+  isStub: boolean;
+  stubReason?: string;
+  workflowUsed: string | null;
+  syntaxValidated: boolean;
+  syntaxValidationNote?: string;
+  envExample?: string;
+}
+
+export function useGenerateCode(slug: string) {
+  return useMutation({
+    mutationFn: (input: { lang: "ts" | "py"; workflow?: string }) =>
+      request<GeneratedCode>(`/api/runs/${slug}/generate`, { method: "POST", body: JSON.stringify(input) }),
   });
 }
 

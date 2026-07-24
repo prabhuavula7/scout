@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Endpoint } from "@scout/types";
+import type { AuthScheme, Endpoint } from "@scout/types";
 import { generateCurl, generatePython, generateTypeScript } from "@/lib/codegen";
 
 const METHOD_COLORS: Record<Endpoint["method"], string> = {
@@ -12,19 +12,19 @@ const METHOD_COLORS: Record<Endpoint["method"], string> = {
   DELETE: "text-red-600 dark:text-red-400",
 };
 
-function CodeTabs({ endpoint, baseUrl }: { endpoint: Endpoint; baseUrl: string }) {
+function CodeTabs({ endpoint, baseUrl, authScheme }: { endpoint: Endpoint; baseUrl: string; authScheme: AuthScheme | null }) {
   const [tab, setTab] = useState<"curl" | "typescript" | "python">("curl");
 
   const code = useMemo(() => {
     switch (tab) {
       case "curl":
-        return generateCurl(endpoint, baseUrl);
+        return generateCurl(endpoint, baseUrl, authScheme);
       case "typescript":
-        return generateTypeScript(endpoint, baseUrl);
+        return generateTypeScript(endpoint, baseUrl, authScheme);
       case "python":
-        return generatePython(endpoint, baseUrl);
+        return generatePython(endpoint, baseUrl, authScheme);
     }
-  }, [tab, endpoint, baseUrl]);
+  }, [tab, endpoint, baseUrl, authScheme]);
 
   return (
     <div className="rounded-lg border border-stone-200 dark:border-stone-800">
@@ -50,7 +50,15 @@ function CodeTabs({ endpoint, baseUrl }: { endpoint: Endpoint; baseUrl: string }
   );
 }
 
-export function EndpointList({ endpoints, baseUrl }: { endpoints: Endpoint[]; baseUrl: string }) {
+export function EndpointList({
+  endpoints,
+  baseUrl,
+  authScheme,
+}: {
+  endpoints: Endpoint[];
+  baseUrl: string;
+  authScheme: AuthScheme | null;
+}) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const groups = useMemo(() => {
@@ -107,7 +115,7 @@ export function EndpointList({ endpoints, baseUrl }: { endpoints: Endpoint[]; ba
                         </table>
                       </div>
                     )}
-                    <CodeTabs endpoint={endpoint} baseUrl={baseUrl} />
+                    <CodeTabs endpoint={endpoint} baseUrl={baseUrl} authScheme={authScheme} />
                   </div>
                 )}
               </div>
