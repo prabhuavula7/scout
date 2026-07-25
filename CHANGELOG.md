@@ -4,6 +4,12 @@ All notable changes to Scout are documented here. Format loosely follows [Keep a
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-07-25
+
+### Fixed
+
+- **Stale `generate_platform` MCP tool description**: still claimed v1 only supported `api_key_header`/`bearer_token`, though `api_key_query` was added earlier the same day. Found during a real end-to-end verification of the published 2.1.0 package (a real MCP stdio handshake against the actual installed binary), not a code review, this is the text an MCP client reads to decide how to call the tool, so a stale claim there is user-facing.
+
 ## [2.1.0] - 2026-07-25
 
 ### Added

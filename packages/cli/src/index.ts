@@ -20,7 +20,7 @@ const program = new Command();
 program
   .name("scout")
   .description("Understand any enterprise platform in minutes. Local, no login, no server.")
-  .version("2.1.0");
+  .version("2.1.1");
 
 registerUnderstandCommand(program);
 registerListCommand(program);
