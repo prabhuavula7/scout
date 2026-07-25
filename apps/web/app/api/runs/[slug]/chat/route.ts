@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { runChatAgent } from "@scout/agents";
+import { runAgenticChatAgent } from "@scout/agents";
 import { LocalFileStore } from "@scout/store";
-import { resolveLLMProvider } from "@/lib/server-config";
+import { resolveLLMProvider, resolveSearchProvider } from "@/lib/server-config";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -30,8 +30,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
 
   try {
     const llm = await resolveLLMProvider();
-    const result = await runChatAgent(store, llm, platformId, body.message, history);
-    const saved = await store.appendChatMessage("assistant", result.answer, result.citations);
+    const searchProvider = await resolveSearchProvider();
+    const result = await runAgenticChatAgent(store, llm, searchProvider, platformId, body.message, history);
+    const saved = await store.appendChatMessage("assistant", result.answer, result.sources);
     return NextResponse.json(saved);
   } catch (error) {
     // The user's message is already saved above; only the reply failed

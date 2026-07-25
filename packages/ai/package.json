@@ -9,7 +9,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
@@ -21,6 +22,7 @@
   "devDependencies": {
     "@scout/typescript-config": "workspace:*",
     "typescript": "^5.7.2",
-    "@types/node": "^22.10.5"
+    "@types/node": "^22.10.5",
+    "vitest": "^2.1.8"
   }
 }

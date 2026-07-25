@@ -3,165 +3,53 @@
 [![CI](https://github.com/prabhuavula7/scout/actions/workflows/ci.yml/badge.svg)](https://github.com/prabhuavula7/scout/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Understand any enterprise platform in minutes.**
+**Give Claude Code, Cursor, Codex, and Gemini CLI accurate knowledge of any API before they write a line of integration code.**
 
-Point Scout at a platform's OpenAPI/Swagger spec and its docs, and it produces a cited integration blueprint (architecture, auth flow, data model, common workflows, pitfalls) plus a grounded chat assistant, all running locally on your machine. No account, no server, no hosting.
+Point Scout at a platform's OpenAPI spec and its docs. It crawls the docs, cross-checks them against the spec, and produces a cited, structural understanding: architecture, auth flow, data model, entity relationships, workflows, real pitfalls. Then it hands that understanding to your coding agent through one MCP server, so the agent reasons from what the platform's docs actually say instead of a plausible-sounding guess from training data.
+
+Everything runs on your machine. No account, no hosted backend, no telemetry.
 
 ```
 npm install -g @dotapk7/scoutcli
+```
 
-# 1. Add an LLM provider (required once; picks the API key up from ~/.scout/config.json after this)
+## Two minutes to a grounded blueprint
+
+```
 scout config llm add openai --api-key sk-...
-#   ...or: anthropic --api-key sk-ant-...  /  azure-openai --base-url <endpoint> --api-key <key>
-#   ...or: openai-compatible --base-url http://localhost:11434/v1 --api-key ollama --chat-model llama3.1  (local models: Ollama, LM Studio, vLLM, etc)
-
-# 2. Point it at a spec
 scout understand https://petstore3.swagger.io/api/v3/openapi.json --docs https://example.com/docs
 scout chat petstore-openapi-3-0
-scout serve
 ```
 
-Prefer a browser to a terminal? Skip straight to `scout serve` (no config step needed first) and add a provider from the Settings tab instead — the web app walks you through the same thing with a form.
+That's it. `scout serve` opens the same thing in a browser if you'd rather not stay in a terminal.
 
-Don't want Node/npm on your machine at all? See "Run with Docker" below, one `docker compose up` and you're at the web UI.
+![Scout's understanding of the real Stripe API: summary, architecture, auth flow, and a full table of contents](public/understanding-summary.png)
 
-![Understanding page: summary, architecture overview, and a table of contents for the platform's blueprint](public/understanding-summary.png)
+## The problem
 
-## What this is
+You open a platform's docs to build an integration. Forty tabs in, you still don't know how auth actually works, what the core objects are, or which of six similarly-named endpoints does what you need. You paste a docs URL into Claude Code and ask it to wire up the integration. It writes confident code against an endpoint that doesn't exist, because it's pattern-matching against every payments API it saw in training, not reading this platform's actual docs.
 
-A CLI (`scout`) and a small local web app (`scout serve`) built on the same core: an agent pipeline that imports an OpenAPI/Swagger spec, crawls the docs you point it at, chunks and embeds them, and asks an LLM to synthesize a grounded, citation-backed understanding of the platform, not a guess from the model's training data. Everything is stored under `~/.scout/runs/`, so a run from a month ago and one from five minutes ago show up identically. The web app isn't just a viewer: its "New" tab runs the same pipeline as `scout understand`, so someone who'd rather not touch a terminal at all can install once, run `scout serve`, and do everything (start a run, watch its status live, chat, find related resources, configure providers) from the browser.
+That gap, between what a coding agent assumes and what a platform's docs actually say, is where integrations break. Scout closes it. It reads the OpenAPI spec as ground truth for what the API can do, crawls the docs as ground truth for how it's meant to be used, and cross-checks one against the other. When something isn't evidenced in either, it says so instead of inventing it.
 
-## Why it exists
+## What you get
 
-Every integration engineer has opened an unfamiliar platform's docs and spent the first hour just building a mental model: what's the auth flow, what are the core entities, what breaks in practice. Scout automates that first hour. It's the tool a Forward Deployed Engineer, a solutions architect, or anyone shipping a new integration would reach for before writing the first line of code.
+- **Understand Stripe, HubSpot, or any OpenAPI-documented platform in minutes**, not the first afternoon of a new integration.
+- **Give any MCP-speaking coding agent the same grounded understanding** through `scout mcp`, mid-session, no copy-pasting docs into a chat window.
+- **Ask questions and get cited answers**, never an invented endpoint or field.
+- **Get a real, syntax-checked starter script**, the auth handshake plus one working call, not pseudocode.
+- **Hand your coding agent a paste-ready integration brief**, task, auth, starter code, and known pitfalls in one document.
+- **Know the moment a platform's docs change** instead of finding out in production.
 
-## Who it's for
+## AI agents get it too
 
-Engineers who integrate with third-party platforms regularly, not just once. It's designed to be run repeatedly: `scout watch` keeps a platform's understanding current as its docs change, and every run is kept, so you can come back to a platform you looked at last quarter and see what changed.
-
-## Why OpenAPI/Swagger instead of just a URL
-
-A bare docs URL is prose; an OpenAPI spec is a machine-readable contract, endpoints, parameters, schemas, auth scheme, all structured. Scout uses the spec as ground truth for what the API can actually do, and the crawled docs as ground truth for how it's meant to be used, prose and endpoint contract cross-checked against each other rather than trusting either alone. That's also why the Understanding Agent is instructed to say "missing documentation" instead of inventing an endpoint or field that isn't evidenced in what was actually provided.
-
-The same honesty extends to Scout's own limits, not just the platform's: synthesis is capped (300 endpoints, 100 doc chunks per run, to bound prompt size and cost) so a run's page discloses it via a warning banner whenever a cap was actually hit, rather than quietly looking like a complete blueprint for a platform far larger than what was actually analyzed. A doc page that comes back suspiciously thin (commonly a JS-rendered page a static crawl can't execute) gets the same treatment.
-
-## Real-world use cases
-
-- Evaluating a new vendor's API before a build/buy decision.
-- Onboarding onto a platform your team just adopted, without reading the entire docs site cover to cover.
-- Keeping a living understanding of a platform your team integrates with, refreshed automatically as its docs change (`scout watch`).
-- Feeding a coding agent (Claude Code, Codex, Gemini CLI) real, cited platform knowledge mid-session via `scout mcp`, instead of it guessing from training data.
-
-## Screenshots
-
-<table>
-<tr>
-<td width="50%">
-
-**Runs**, the landing page
-
-![Runs list](public/runs-list.png)
-
-</td>
-<td width="50%">
-
-**New**, start an understanding without touching the CLI
-
-![New understanding form](public/new-understanding.png)
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**Understanding**, entity relationships as a Mermaid diagram
-
-![Entity relationship diagram with the table of contents scroll-spy active](public/understanding-entity-diagram.png)
-
-</td>
-<td width="50%">
-
-**API Explorer**, every endpoint the spec declares
-
-![API Explorer endpoint list](public/api-explorer.png)
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**AI Chat**, grounded and cited, refuses to guess
-
-![AI chat refusing to invent an endpoint not in the crawled docs, with citations](public/ai-chat.png)
-
-</td>
-<td width="50%">
-
-**Settings**, provider keys (never displayed once saved)
-
-![Settings page showing configured LLM and search providers](public/settings.png)
-
-</td>
-</tr>
-</table>
-
-## Core commands
-
-| Command | What it does |
-|---|---|
-| `scout understand <spec-url-or-path>` | Run the full pipeline: import spec, crawl `--docs`, generate the understanding. Prints a size/token estimate first; `--docs-depth <n>` (default 1) follows same-site links that many hops past each `--docs` URL, `--docs-max-pages <n>` (default 20) caps the total regardless of depth. |
-| `scout list` | List every run, most recently updated first. |
-| `scout rm <slug>` | Delete a run and everything under it. Prompts for confirmation unless `-y`/`--yes` is passed. |
-| `scout chat <slug>` | Terminal chat REPL, grounded in the crawled docs, with citations. |
-| `scout generate <slug> --lang ts\|py [--workflow <name>] [--out <path>]` | Generate a runnable starter script (auth handshake + one real read call) from the blueprint. v1 supports API-key-header, Bearer-token, and API-key-query auth with real templates; anything else (OAuth2, no endpoints, etc.) gets an honest stub instead of fabricated code. `--list-workflows` prints the run's available workflow names instead of generating. Real (non-stub) output is syntax-checked (`node --check`/`python3 -m py_compile`) before being returned -- proves the code parses, not that the API call succeeds. |
-| `scout diff <slug> [--json]` | Drift detection: show what changed in a run's understanding since its last refresh -- narrative sections that changed, plus workflows/data-model entities/pitfalls/integration opportunities added or removed. Uses the snapshot Scout already takes before every refresh, no new storage. |
-| `scout export <slug> --format md\|json` | Export the understanding (and any research results) as Markdown or JSON. |
-| `scout watch <slug>` | Poll the run's doc URLs, re-run the pipeline automatically when they change. |
-| `scout research <slug>` | Find related articles, tutorials, and use cases via a configured search provider (Tavily, SerpApi). |
-| `scout serve` | Start the local web viewer. Binds `127.0.0.1` only by default (no login, not reachable from outside the machine); `--host 0.0.0.0` opens it up, e.g. running inside Docker. |
-| `scout connectors list` / `add <file>` | List or add connector presets (see "Adding a connector" below). |
-| `scout config llm add <kind> --api-key <key>` | Add an LLM provider (openai, anthropic, azure-openai, openrouter, openai-compatible). See "Configuring providers" below. |
-| `scout config llm list` / `remove <id>` / `enable <id>` / `disable <id>` | List, remove, or toggle a configured LLM provider without deleting it. |
-| `scout config search add <kind> --api-key <key>` | Add a web search provider (tavily, serpapi), used by `scout research`. |
-| `scout config search list` / `remove <id>` / `enable <id>` / `disable <id>` | List, remove, or toggle a configured search provider. |
-| `scout config set <key> <value>` / `get` | Legacy single-key shorthand (`openai-api-key`, `openai-chat-model`, `openai-embedding-model`, `tavily-api-key`), kept working for existing scripts. |
-| `scout mcp` | Run Scout as an MCP server (stdio) for Claude Code, Codex, Gemini CLI, etc. |
-
-## Configuring providers
-
-Scout works with any LLM and any web search provider, not just OpenAI and Tavily, and you can configure more than one for either role:
-
-```
-scout config llm add openai --api-key sk-... --roles chat,embedding
-scout config llm add anthropic --api-key sk-ant-... --roles chat --priority 1
-scout config search add tavily --api-key tvly-...
-```
-
-`--roles` controls what an entry is used for: `chat` (completions) and/or `embedding` (Anthropic has no embeddings API, so an Anthropic entry only ever carries `chat`; pair it with an OpenAI/Azure/compatible entry for `embedding`). When more than one entry shares a role, `--priority` (lower first) orders a fallback chain: if the first provider's call fails, Scout automatically retries with the next one. `openai-compatible` covers OpenRouter, Ollama, LM Studio, vLLM, or any other backend that speaks the OpenAI chat-completions wire protocol at a custom `--base-url`, so local/open-source models work the same way. `scout config llm list` / `scout config search list` show what's configured (keys are never printed back); `remove <id>` deletes an entry.
-
-Everything above is also available as a Settings tab in `scout serve`'s local web viewer, for anyone who'd rather not touch the terminal. Both read and write the same `~/.scout/config.json`, so a key added in one shows up in the other.
-
-If nothing is configured at all, Scout falls back to `OPENAI_API_KEY` / `TAVILY_API_KEY` environment variables, so the zero-setup `.env` workflow still works without ever touching `scout config`.
-
-## Using `scout mcp` with a coding agent
-
-`scout mcp` is a standard stdio MCP server (built on `@modelcontextprotocol/sdk`), giving an agent the same capabilities as the CLI/web app: `understand_platform`, `ask_platform`, `list_platforms`, `list_connectors`, `refresh_platform`, `diff_platform`, `generate_platform`, `export_platform`, `research_platform`, `remove_platform` (the last requires an explicit `confirm: true`, since it's irreversible). Any MCP client that supports stdio servers can use it; setup is the same `command`/`args` shape everywhere, just in a different config file:
+`scout mcp` runs a standard stdio MCP server. Add it once and Claude Code, Claude Desktop, Cursor, Codex CLI, and Gemini CLI can all call Scout directly, mid-task, instead of guessing.
 
 **Claude Code**
 ```
 claude mcp add scout -- scout mcp
 ```
-or in a project's `.mcp.json`:
-```json
-{ "mcpServers": { "scout": { "command": "scout", "args": ["mcp"] } } }
-```
 
-**Claude Desktop** (`claude_desktop_config.json`)
-```json
-{ "mcpServers": { "scout": { "command": "scout", "args": ["mcp"] } } }
-```
-
-**Cursor** (`.cursor/mcp.json`, project or global)
+**Claude Desktop** (`claude_desktop_config.json`), **Cursor** (`.cursor/mcp.json`)
 ```json
 { "mcpServers": { "scout": { "command": "scout", "args": ["mcp"] } } }
 ```
@@ -173,81 +61,84 @@ command = "scout"
 args = ["mcp"]
 ```
 
-If you're running from source instead of a global install, swap `"scout"` for `"node"` and add the CLI's built entry point as the first arg, e.g. `"args": ["/path/to/scout/packages/cli/dist/index.js", "mcp"]`.
-
-## Architecture
-
-```
-packages/agents       import / documentation / understanding / chat / research agents, provider-agnostic search
-packages/ai           provider-agnostic LLM interface (OpenAI, Anthropic, Azure OpenAI, OpenRouter, OpenAI-compatible)
-packages/rag          chunking + citation formatting
-packages/store        AgentStore contract + LocalFileStore (the CLI's default persistence), shared provider config
-packages/connectors    connector presets as JSON (bundled + user-added)
-packages/cli           the `scout` binary
-apps/web               the local web app (Next.js), served by `scout serve`: a sidebar (Runs / New / Settings), a "New" tab to start an understand run without the CLI, and a Settings tab for provider keys
-```
-
-The agent pipeline (`packages/agents`) doesn't know or care where its data is persisted; it depends on an `AgentStore` interface. `LocalFileStore` (in `packages/store`) is the default implementation: one directory per run under `~/.scout/runs/<slug>/`, flat JSON files for the current snapshot, append-only JSONL for chat and audit logs, and a `history/` folder of prior understanding snapshots whenever `scout watch` detects a doc change. Hybrid search (embedding cosine similarity blended with keyword relevance) runs in-memory, no database required.
-
-`apps/api` and `apps/workers` (Fastify + Clerk auth + Postgres/pgvector + BullMQ/Redis) implement the same `AgentStore` contract over Postgres. They're kept in the repo, working, but dormant: not part of the default build/dev/test pipeline, for anyone who wants a hosted multi-user mode later. See `apps/api/README.md`.
-
-## Adding a connector
-
-A connector is a JSON file, not code:
-
+**Gemini CLI** (`~/.gemini/settings.json`)
 ```json
-{
-  "slug": "acme",
-  "name": "Acme",
-  "category": "crm",
-  "implemented": true,
-  "suggestedDocsUrl": "https://developers.acme.com/",
-  "defaultAuthScheme": "bearer_token",
-  "description": "Acme's CRM API."
-}
+{ "mcpServers": { "scout": { "command": "scout", "args": ["mcp"] } } }
 ```
 
-Bundled connectors live in `packages/connectors/registry/*.json`; `scout connectors add <file>` drops your own into `~/.scout/connectors/`, which overrides a bundled one by slug or adds a new one. `implemented: true` means someone has actually run `scout understand` against it successfully, since the import path itself is generic (any valid OpenAPI/Swagger spec works regardless of connector). See `CONTRIBUTING.md` for the full recipe if you want to contribute one upstream.
+Eleven tools, the same capabilities as the CLI and web app: import a spec, ask a grounded question, refresh a stale run, check what changed, generate a starter script, assemble an IDE handoff brief, export the blueprint, find further reading, clean up. A developer working in Claude Code can say "integrate Stripe invoicing" and the agent pulls real, cited platform knowledge into its own context instead of hallucinating an API shape. Full reference: [docs/mcp.md](docs/mcp.md).
 
-## Run with Docker
+## AI Chat, grounded and cited
 
-For anyone who'd rather not install Node/pnpm at all:
+The chat isn't a wrapper around a generic model. It runs a real multi-turn tool-calling loop: it can search the platform's own crawled docs, search the live web if you've configured a provider, generate starter code, or assemble an IDE handoff brief, mid-conversation. Every answer is tagged with where it actually came from: a doc excerpt with a real similarity score, a live web result with a URL, or the model's own general knowledge, flagged unverified rather than given a fake citation.
 
-```
-git clone https://github.com/prabhuavula7/scout.git
-cd scout
-docker compose up
-```
+> **You:** How do I authenticate with the Stripe API?
+>
+> **Scout:** All API calls must use HTTPS and be authenticated with Stripe API keys. Test mode secret keys start with `sk_test_`... [1] [2] [3] [4]
 
-Open `http://localhost:4207` and you're at the same web app `scout serve` gives a native install, including the "New" tab, Settings tab, and chat. Runs and provider config persist in a named Docker volume (`scout-data`, mounted at `/data` inside the container) across restarts and rebuilds.
+![AI chat answering a real authentication question with real citations from the crawled Stripe docs](public/ai-chat.png)
 
-Skip the Settings tab entirely by setting keys as env vars before starting:
+Ask it something Scout genuinely can't verify and it says so instead of guessing. Stripe's real auth scheme is HTTP Basic, not Bearer; when a workflow needs a write call Scout's codegen doesn't support yet, it tells you exactly that instead of quietly showing you the wrong thing:
 
-```
-OPENAI_API_KEY=sk-... TAVILY_API_KEY=tvly-... docker compose up
-```
+![Scout refusing to fabricate write-call code, showing the real read-call skeleton and an explicit warning instead](public/starter-code.png)
 
-(or put them in a `.env` file next to `docker-compose.yml`; compose reads it automatically). Everything else about provider configuration in the README above applies the same way once the container has your keys.
+## Generated code, or an honest stub
 
-CLI commands (`understand`, `chat`, `rm`, etc.) work the same way through the running container, since the web app and CLI both read the same `/data` volume:
+`scout generate` turns a stored blueprint into a runnable starter script: the auth handshake plus one real, working call, syntax-checked before it's shown to you. When a platform's auth scheme isn't supported yet or the workflow needs a write call, you get a clearly labeled stub and a reason, never fabricated-looking code that quietly does the wrong thing.
 
-```
-docker compose exec scout scout understand https://petstore3.swagger.io/api/v3/openapi.json --docs https://example.com/docs
-docker compose exec scout scout list
-```
+`scout handoff` goes one step further: it assembles the task, the auth flow, the starter script, the `.env.example`, and the real pitfalls Scout's synthesis flagged into one Markdown brief you can paste straight into a coding agent as its task prompt, or `--copy` it straight to your clipboard.
 
-`docker compose up --build` after pulling new commits rebuilds the image from source; there's no published image on Docker Hub/GHCR yet, `build: .` in `docker-compose.yml` always builds locally.
+![A real IDE handoff brief for HubSpot Contacts: task, auth, starter code, and a sequence diagram, ready to paste into a coding agent](public/ide-handoff.png)
 
-## Local development
+Full reference, including the exact auth schemes supported today: [docs/generated-code.md](docs/generated-code.md).
 
-```
-pnpm install
-pnpm build           # builds everything except the dormant hosted mode
-pnpm --filter @dotapk7/scoutcli dev -- understand <spec-url>   # run the CLI from source via tsx
-pnpm --filter @dotapk7/scoutcli build && node packages/cli/dist/index.js serve
-```
+## Every endpoint, at a glance
 
-`pnpm typecheck` / `pnpm lint` / `pnpm test` cover the default (CLI + viewer) path, including `apps/web`'s own test suite (API route handlers + interactive components, via Vitest + React Testing Library); `pnpm hosted:build` / `pnpm hosted:dev` cover the dormant hosted mode.
+The API Explorer lists every endpoint the spec declares, method-color-coded, searchable, no scrolling through YAML.
+
+![API Explorer listing every real Stripe endpoint from the imported spec](public/api-explorer.png)
+
+## Real examples
+
+Three platforms verified end-to-end against their real, public specs and docs this session:
+
+| Platform | Command | What Scout found |
+|---|---|---|
+| **Stripe** | `scout understand https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json --docs https://docs.stripe.com` | Auth is HTTP Basic, not Bearer, real templates don't cover it yet, so `scout generate` correctly stubs instead of guessing. |
+| **HubSpot** (Contacts) | `scout understand <hubspot-openapi-url> --docs https://developers.hubspot.com/docs/api/crm/contacts` | Real, syntax-validated TypeScript for the `api_key_query` auth scheme, plus 25+ real pitfalls (batch limits, idempotency, lifecycle-stage ordering) pulled straight from the docs. |
+| **GitHub** (REST API) | `scout understand https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json --docs https://docs.github.com/en/rest` | Correctly identified `none`-scheme public endpoints vs. token-gated ones, and generated an honest stub rather than assuming a default. |
+
+More platforms, full transcripts, and a walkthrough of the honesty behavior: [docs/examples.md](docs/examples.md).
+
+## Core commands
+
+| Command | What it does |
+|---|---|
+| `scout understand <spec-url-or-path>` | Import a spec, crawl `--docs`, generate the understanding. |
+| `scout chat <slug>` | Agentic chat: real tool-calling, cited answers, never a fabricated citation. |
+| `scout generate <slug> --lang ts\|py` | A real, syntax-checked starter script, or an honest stub. |
+| `scout handoff <slug> --lang ts\|py [--copy]` | A paste-ready integration brief for a coding agent. |
+| `scout diff <slug>` | Drift detection: what changed in a run's understanding since its last refresh. |
+| `scout refresh <slug> [--recrawl]` | Regenerate the understanding without a full re-import. |
+| `scout watch <slug>` | Poll a run's docs and refresh automatically when they change. |
+| `scout export <slug> --format md\|json` | Export the blueprint. |
+| `scout serve` | The local web app: Runs, New, AI Chat, API Explorer, Settings. |
+| `scout mcp` | Run Scout as an MCP server for coding agents. |
+
+Full option list on any command: `scout <command> --help`. Everything else, providers, connectors, Docker, architecture, contributing: [docs/](docs/).
+
+## Documentation
+
+- [Quickstart](docs/quickstart.md), five minutes from install to a grounded chat.
+- [Why Scout exists](docs/why-scout.md), the honesty model and why OpenAPI plus docs beats either alone.
+- [MCP reference](docs/mcp.md), all eleven tools, every agent's config format.
+- [Generated code](docs/generated-code.md), `scout generate` and `scout handoff` in depth.
+- [Examples](docs/examples.md), real runs against Stripe, HubSpot, GitHub, and more.
+- [Connectors](docs/connectors.md), adding a platform preset.
+- [Architecture](docs/architecture.md), package layout and the storage model.
+- [Docker](docs/docker.md), running Scout with no local Node install.
+- [Development](docs/development.md), building and testing from source.
+- [FAQ](docs/faq.md).
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes and [ROADMAP.md](ROADMAP.md) for what's done vs. still open.
 

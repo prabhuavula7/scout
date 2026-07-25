@@ -1,14 +1,20 @@
 import readline from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { Command } from "commander";
-import { runChatAgent } from "@scout/agents";
+import { runAgenticChatAgent } from "@scout/agents";
 import { LocalFileStore } from "@scout/store";
-import { resolveLLMProvider } from "../config.js";
+import { resolveLLMProvider, resolveSearchProvider } from "../config.js";
+
+function describeSource(source: { type: "docs" | "web" | "model_knowledge"; ref: string; title?: string }): string {
+  if (source.type === "docs") return `${source.title ?? source.ref} (${source.ref})`;
+  if (source.type === "web") return `[web] ${source.title ?? source.ref} (${source.ref})`;
+  return "[unverified: not from this platform's docs, the model's own general knowledge]";
+}
 
 export function registerChatCommand(program: Command): void {
   program
     .command("chat")
-    .description("Chat with a platform's indexed documentation, grounded with citations")
+    .description("Chat with a platform, grounded in its indexed documentation, with real tool access (search, codegen, handoff briefs) and sourced answers")
     .argument("<slug>", "the run slug, see `scout list`")
     .action(async (slug: string) => {
       const opened = await LocalFileStore.open(slug);
@@ -19,6 +25,7 @@ export function registerChatCommand(program: Command): void {
       }
       const { store, platformId } = opened;
       const llm = await resolveLLMProvider();
+      const searchProvider = await resolveSearchProvider();
 
       const priorMessages = await store.getChatHistory();
       const history = priorMessages.map((m) => ({ role: m.role, content: m.content }));
@@ -38,15 +45,13 @@ export function registerChatCommand(program: Command): void {
           if (!message.trim()) continue;
 
           await store.appendChatMessage("user", message, []);
-          const result = await runChatAgent(store, llm, platformId, message, history);
-          await store.appendChatMessage("assistant", result.answer, result.citations);
+          const result = await runAgenticChatAgent(store, llm, searchProvider, platformId, message, history);
+          await store.appendChatMessage("assistant", result.answer, result.sources);
 
           history.push({ role: "user", content: message }, { role: "assistant", content: result.answer });
           console.log(`\n${result.answer}\n`);
-          if (result.citations.length > 0) {
-            console.log(
-              result.citations.map((c, i) => `  [${i + 1}] ${c.sourceTitle} (${c.sourceUrl})`).join("\n"),
-            );
+          if (result.sources.length > 0) {
+            console.log(result.sources.map((s, i) => `  [${i + 1}] ${describeSource(s)}`).join("\n"));
             console.log("");
           }
         }

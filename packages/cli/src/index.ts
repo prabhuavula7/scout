@@ -10,6 +10,7 @@ import { registerServeCommand } from "./commands/serve.js";
 import { registerWatchCommand } from "./commands/watch.js";
 import { registerRefreshCommand } from "./commands/refresh.js";
 import { registerGenerateCommand } from "./commands/generate.js";
+import { registerHandoffCommand } from "./commands/handoff.js";
 import { registerDiffCommand } from "./commands/diff.js";
 import { registerResearchCommand } from "./commands/research.js";
 import { registerMcpCommand } from "./commands/mcp.js";
@@ -19,7 +20,7 @@ const program = new Command();
 program
   .name("scout")
   .description("Understand any enterprise platform in minutes. Local, no login, no server.")
-  .version("2.0.0");
+  .version("2.1.0");
 
 registerUnderstandCommand(program);
 registerListCommand(program);
@@ -32,6 +33,7 @@ registerServeCommand(program);
 registerWatchCommand(program);
 registerRefreshCommand(program);
 registerGenerateCommand(program);
+registerHandoffCommand(program);
 registerDiffCommand(program);
 registerResearchCommand(program);
 registerMcpCommand(program);

@@ -69,10 +69,17 @@ export function registerGenerateCommand(program: Command): void {
 
       if (result.isStub) {
         console.error(`Warning: ${result.stubReason} -- generating an honest stub instead of a real script.`);
-      } else if (result.syntaxValidated) {
-        console.error(`Syntax validated (${lang === "ts" ? "node --check" : "python3 -m py_compile"}) -- not tested against the live API.`);
       } else {
-        console.error(`Warning: syntax not validated (${result.syntaxValidationNote ?? "unknown reason"}).`);
+        if (result.workflowMismatch) {
+          console.error(
+            `Warning: the targeted workflow needs a write call, which v1 doesn't generate real code for yet (GET only). This script demonstrates the auth handshake and a basic read call instead -- it does NOT implement that workflow.`,
+          );
+        }
+        if (result.syntaxValidated) {
+          console.error(`Syntax validated (${lang === "ts" ? "node --check" : "python3 -m py_compile"}) -- not tested against the live API.`);
+        } else {
+          console.error(`Warning: syntax not validated (${result.syntaxValidationNote ?? "unknown reason"}).`);
+        }
       }
 
       if (options.out) {

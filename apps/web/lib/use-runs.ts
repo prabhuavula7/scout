@@ -1,8 +1,15 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AuthScheme, Citation, ChatRole, Endpoint, PlatformUnderstanding, Resource } from "@scout/types";
+import type { AuthScheme, ChatRole, Endpoint, PlatformUnderstanding, Resource } from "@scout/types";
 import type { PlatformStatus } from "@scout/ui";
+
+export interface ChatSource {
+  type: "docs" | "web" | "model_knowledge";
+  ref: string;
+  title?: string;
+  score?: number;
+}
 
 export interface RunSummary {
   id: string;
@@ -35,7 +42,7 @@ export interface ChatMessageRecord {
   id: string;
   role: ChatRole;
   content: string;
-  citations: Citation[];
+  citations: ChatSource[];
   createdAt: string;
 }
 
@@ -156,12 +163,25 @@ export interface GeneratedCode {
   syntaxValidated: boolean;
   syntaxValidationNote?: string;
   envExample?: string;
+  workflowMismatch: boolean;
 }
 
 export function useGenerateCode(slug: string) {
   return useMutation({
     mutationFn: (input: { lang: "ts" | "py"; workflow?: string }) =>
       request<GeneratedCode>(`/api/runs/${slug}/generate`, { method: "POST", body: JSON.stringify(input) }),
+  });
+}
+
+export interface HandoffResult {
+  markdown: string;
+  workflowUsed: string | null;
+}
+
+export function useHandoff(slug: string) {
+  return useMutation({
+    mutationFn: (input: { lang: "ts" | "py"; workflow?: string }) =>
+      request<HandoffResult>(`/api/runs/${slug}/handoff`, { method: "POST", body: JSON.stringify(input) }),
   });
 }
 

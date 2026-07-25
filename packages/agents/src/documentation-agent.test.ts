@@ -19,6 +19,7 @@ function fakeLLM(): LLMProvider {
     complete: vi.fn(),
     completeStructured: vi.fn(),
     streamComplete: vi.fn(),
+    completeWithTools: vi.fn(),
     embed: vi.fn(async (texts: string[]) => texts.map(() => [0.1, 0.2, 0.3])),
   };
 }

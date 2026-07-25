@@ -1,6 +1,12 @@
 import type { LLMProviderEntry } from "@scout/types";
 import type { z } from "zod";
-import type { CompletionParams, LLMProvider, StructuredCompletionParams } from "./provider.js";
+import type {
+  CompletionParams,
+  LLMProvider,
+  StructuredCompletionParams,
+  ToolCompletionParams,
+  ToolCompletionResult,
+} from "./provider.js";
 import { FallbackLLMProvider } from "./fallback.js";
 import { OpenAIProvider } from "./providers/openai.js";
 import { AnthropicProvider } from "./providers/anthropic.js";
@@ -105,6 +111,10 @@ export function buildLLMProvider(entries: LLMProviderEntry[]): LLMProvider {
     async embed(texts: string[]): Promise<number[][]> {
       if (!embedding) throw new Error(noEmbeddingConfigured);
       return embedding.embed(texts);
+    },
+    async completeWithTools(params: ToolCompletionParams): Promise<ToolCompletionResult> {
+      if (!chat) throw new Error(noChatConfigured);
+      return chat.completeWithTools(params);
     },
   };
 }

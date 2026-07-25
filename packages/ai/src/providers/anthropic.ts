@@ -5,7 +5,41 @@ import type {
   CompletionParams,
   LLMProvider,
   StructuredCompletionParams,
+  ToolCompletionParams,
+  ToolCompletionResult,
+  ToolLoopMessage,
 } from "../provider.js";
+
+function toAnthropicMessages(messages: ToolLoopMessage[]): Anthropic.MessageParam[] {
+  const out: Anthropic.MessageParam[] = [];
+  for (const m of messages) {
+    if (m.role === "user") {
+      out.push({ role: "user", content: m.content });
+      continue;
+    }
+    if (m.role === "assistant") {
+      const content: Array<Anthropic.TextBlockParam | Anthropic.ToolUseBlockParam> = [];
+      if (m.content) content.push({ type: "text", text: m.content });
+      for (const tc of m.toolCalls) {
+        content.push({ type: "tool_use", id: tc.id, name: tc.name, input: tc.input as Record<string, unknown> });
+      }
+      out.push({ role: "assistant", content });
+      continue;
+    }
+    // Anthropic requires tool_result blocks inside a user-role message, and
+    // this loop always feeds one tool_result per call made in direct
+    // response to the assistant's tool_use turn -- merge consecutive
+    // tool_results into a single user message rather than one per message.
+    const block: Anthropic.ToolResultBlockParam = { type: "tool_result", tool_use_id: m.toolCallId, content: m.content };
+    const last = out.at(-1);
+    if (last?.role === "user" && Array.isArray(last.content) && last.content.every((c) => c.type === "tool_result")) {
+      (last.content as Anthropic.ToolResultBlockParam[]).push(block);
+    } else {
+      out.push({ role: "user", content: [block] });
+    }
+  }
+  return out;
+}
 
 export interface AnthropicProviderOptions {
   apiKey?: string | undefined;
@@ -98,5 +132,31 @@ export class AnthropicProvider implements LLMProvider {
     throw new Error(
       "Anthropic has no embeddings API. Configure a separate provider (e.g. OpenAI) for the \"embedding\" role.",
     );
+  }
+
+  async completeWithTools({ system, messages, tools, temperature }: ToolCompletionParams): Promise<ToolCompletionResult> {
+    const response = await this.client.messages.create({
+      model: this.chatModel,
+      max_tokens: 4096,
+      system,
+      ...(temperature !== undefined && { temperature }),
+      messages: toAnthropicMessages(messages),
+      tools: tools.map((t) => ({
+        name: t.name,
+        description: t.description,
+        input_schema: zodToJsonSchema(t.parameters) as Anthropic.Tool.InputSchema,
+      })),
+      tool_choice: { type: "auto" },
+    });
+    const textBlocks = response.content.filter((b): b is Anthropic.TextBlock => b.type === "text");
+    const toolUseBlocks = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
+    const text = textBlocks
+      .map((b) => b.text)
+      .join("\n")
+      .trim();
+    return {
+      text: text.length > 0 ? text : null,
+      toolCalls: toolUseBlocks.map((b) => ({ id: b.id, name: b.name, input: b.input })),
+    };
   }
 }

@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Endpoint, PlatformUnderstanding } from "@scout/types";
-import { envExampleFor, envVarName, generateCode, toIdentifier, UnknownWorkflowError, type GenerateCodePlatform } from "./generate-code.js";
+import {
+  envExampleFor,
+  envVarName,
+  generateCode,
+  stepMentionsEndpoint,
+  toIdentifier,
+  UnknownWorkflowError,
+  type GenerateCodePlatform,
+} from "./generate-code.js";
 
 function fakeUnderstanding(overrides: Partial<PlatformUnderstanding> = {}): PlatformUnderstanding {
   return {
@@ -116,6 +124,38 @@ describe("generateCode", () => {
       generateCode(fakeUnderstanding(), [fakeEndpoint()], fakePlatform(), { lang: "ts", workflow: "nope" }),
     ).rejects.toThrow(UnknownWorkflowError);
   });
+
+  it("flags workflowMismatch and adds an honest note when the targeted workflow is write-only and the code falls back to an unrelated GET", async () => {
+    const understanding = fakeUnderstanding({
+      commonWorkflows: [{ name: "Create a widget", steps: ["POST /widgets with a JSON body"] }],
+    });
+    const endpoints = [fakeEndpoint({ method: "GET", path: "/widgets", summary: "List widgets" })];
+    const result = await generateCode(understanding, endpoints, fakePlatform(), { lang: "ts", workflow: "Create a widget" });
+
+    expect(result.isStub).toBe(false);
+    expect(result.workflowUsed).toBe("Create a widget");
+    expect(result.workflowMismatch).toBe(true);
+    expect(result.code).toContain("don't mention this call");
+    expect(result.code).toContain("GET /widgets");
+  }, 10000);
+
+  it("does not flag workflowMismatch when the targeted workflow's steps do mention the selected GET endpoint", async () => {
+    const understanding = fakeUnderstanding({
+      commonWorkflows: [{ name: "List widgets", steps: ["Call GET /widgets to list all widgets"] }],
+    });
+    const result = await generateCode(understanding, [fakeEndpoint()], fakePlatform(), { lang: "ts", workflow: "List widgets" });
+
+    expect(result.workflowMismatch).toBe(false);
+    expect(result.code).not.toContain("don't mention this call");
+  }, 10000);
+
+  it("does not flag workflowMismatch when no workflow is targeted at all", async () => {
+    const understanding = fakeUnderstanding({ commonWorkflows: [] });
+    const result = await generateCode(understanding, [fakeEndpoint()], fakePlatform(), { lang: "ts" });
+
+    expect(result.workflowUsed).toBeNull();
+    expect(result.workflowMismatch).toBe(false);
+  }, 10000);
 
   it("normalizes dashed and reserved-word field names into valid identifiers, in a comment (not TS-only interface syntax, so it still validates as plain JS)", async () => {
     const endpoint = fakeEndpoint({
@@ -236,6 +276,18 @@ describe("envVarName", () => {
   it("normalizes a slug into SCREAMING_SNAKE_CASE plus _API_KEY", () => {
     expect(envVarName("stripe")).toBe("STRIPE_API_KEY");
     expect(envVarName("hubspot-contacts")).toBe("HUBSPOT_CONTACTS_API_KEY");
+  });
+});
+
+describe("stepMentionsEndpoint", () => {
+  it("does not false-positive on a method name embedded inside an unrelated word (e.g. \"get\" inside \"widgets\")", () => {
+    const endpoint = fakeEndpoint({ method: "GET", path: "/widgets" });
+    expect(stepMentionsEndpoint("POST /widgets with a JSON body", endpoint)).toBe(false);
+  });
+
+  it("still matches a real, word-boundary method mention", () => {
+    const endpoint = fakeEndpoint({ method: "GET", path: "/widgets" });
+    expect(stepMentionsEndpoint("Call GET /widgets to list all widgets", endpoint)).toBe(true);
   });
 });
 

@@ -5,7 +5,10 @@ import type {
   CompletionParams,
   LLMProvider,
   StructuredCompletionParams,
+  ToolCompletionParams,
+  ToolCompletionResult,
 } from "../provider.js";
+import { completeWithToolsViaOpenAIWire } from "../openai-tool-loop.js";
 
 export interface AzureOpenAIProviderOptions {
   apiKey: string;
@@ -127,5 +130,9 @@ export class AzureOpenAIProvider implements LLMProvider {
       input: texts,
     });
     return response.data.sort((a, b) => a.index - b.index).map((item) => item.embedding);
+  }
+
+  completeWithTools(params: ToolCompletionParams): Promise<ToolCompletionResult> {
+    return completeWithToolsViaOpenAIWire(this.getChatClient(), this.options.chatDeployment!, "Azure OpenAI", params);
   }
 }

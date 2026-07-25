@@ -5,6 +5,7 @@ export * from "./providers/azure-openai.js";
 export * from "./providers/openai-compatible.js";
 export * from "./fallback.js";
 export * from "./factory.js";
+export * from "./openai-tool-loop.js";
 
 import type { LLMProvider } from "./provider.js";
 import { OpenAIProvider } from "./providers/openai.js";

@@ -90,6 +90,7 @@ describe("scout mcp server (end-to-end over the MCP protocol)", () => {
         "diff_platform",
         "export_platform",
         "generate_platform",
+        "handoff_platform",
         "list_connectors",
         "list_platforms",
         "refresh_platform",
@@ -176,6 +177,54 @@ describe("scout mcp server (end-to-end over the MCP protocol)", () => {
     expect(payload.isStub).toBe(false);
     expect(payload.code).toContain("import requests");
     expect(payload.code).toContain("REAL_API_API_KEY");
+  });
+
+  it("handoff_platform assembles a paste-ready brief that embeds the same real script generate_platform produces", async () => {
+    const { store, platformId } = await LocalFileStore.create("Real API", "custom");
+    await store.applyImportResult(platformId, {
+      name: "Real API",
+      baseUrl: "https://api.real.test",
+      authScheme: "bearer_token",
+      rawSpec: null,
+    });
+    await store.insertEndpoints(platformId, [
+      {
+        group: "widgets",
+        method: "GET",
+        path: "/widgets",
+        summary: "List widgets",
+        description: null,
+        parameters: [],
+        requestBodySchema: null,
+        responseSchema: null,
+        exampleRequest: null,
+        exampleResponse: null,
+      },
+    ]);
+    await store.upsertUnderstanding(platformId, fakeUnderstanding);
+
+    const client = await connectedClient();
+    const result = await client.callTool({ name: "handoff_platform", arguments: { slug: store.slug, lang: "py" } });
+    expect(result.isError).toBeFalsy();
+    const markdown = firstText(result);
+    expect(markdown).toContain("# Integration handoff: Real API");
+    expect(markdown).toContain("import requests");
+    expect(markdown).toContain("REAL_API_API_KEY");
+    expect(markdown).toContain("`GET /widgets` -- List widgets");
+  });
+
+  it("handoff_platform reports an unknown-workflow error the same way generate_platform does", async () => {
+    const { store, platformId } = await LocalFileStore.create("Diffable API", "custom");
+    await store.upsertUnderstanding(platformId, fakeUnderstanding);
+
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "handoff_platform",
+      arguments: { slug: store.slug, lang: "ts", workflow: "does-not-exist" },
+    });
+    expect(result.isError).toBeTruthy();
+    const payload = JSON.parse(firstText(result));
+    expect(payload.error).toContain("Unknown workflow");
   });
 
   it("diff_platform reports no prior snapshot for a fresh run, then real drift after a second understanding is stored", async () => {

@@ -5,7 +5,10 @@ import type {
   CompletionParams,
   LLMProvider,
   StructuredCompletionParams,
+  ToolCompletionParams,
+  ToolCompletionResult,
 } from "../provider.js";
+import { completeWithToolsViaOpenAIWire } from "../openai-tool-loop.js";
 
 export interface OpenAIProviderOptions {
   apiKey?: string | undefined;
@@ -97,5 +100,9 @@ export class OpenAIProvider implements LLMProvider {
     return response.data
       .sort((a, b) => a.index - b.index)
       .map((item) => item.embedding);
+  }
+
+  completeWithTools(params: ToolCompletionParams): Promise<ToolCompletionResult> {
+    return completeWithToolsViaOpenAIWire(this.client, this.chatModel, "OpenAI", params);
   }
 }

@@ -101,18 +101,33 @@ export default function ChatPage({ params }: { params: Promise<{ slug: string }>
             )}
             {message.citations.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5 border-t border-stone-300/50 pt-2 dark:border-stone-700/50">
-                {message.citations.map((citation, i) => (
-                  <a
-                    key={citation.chunkId}
-                    href={citation.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    title={citation.sourceTitle}
-                    className="max-w-[10rem] truncate rounded bg-stone-200 px-1.5 py-0.5 text-xs text-stone-600 hover:underline dark:bg-stone-800 dark:text-stone-400"
-                  >
-                    [{i + 1}] {citation.sourceTitle}
-                  </a>
-                ))}
+                {message.citations.map((source, i) =>
+                  source.type === "model_knowledge" ? (
+                    <span
+                      key={`${i}-${source.ref}`}
+                      title="Not from this platform's docs -- the model's own general knowledge, unverified"
+                      className="max-w-[14rem] truncate rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-400"
+                    >
+                      unverified (model knowledge)
+                    </span>
+                  ) : (
+                    <a
+                      key={`${i}-${source.ref}`}
+                      href={source.ref}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={source.title ?? source.ref}
+                      className={`max-w-[10rem] truncate rounded px-1.5 py-0.5 text-xs hover:underline ${
+                        source.type === "web"
+                          ? "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400"
+                          : "bg-stone-200 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
+                      }`}
+                    >
+                      [{i + 1}] {source.type === "web" ? "web: " : ""}
+                      {source.title ?? source.ref}
+                    </a>
+                  ),
+                )}
               </div>
             )}
           </div>

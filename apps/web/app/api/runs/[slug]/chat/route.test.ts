@@ -6,9 +6,10 @@ import { LocalFileStore } from "@scout/store";
 
 vi.mock("@/lib/server-config", () => ({
   resolveLLMProvider: vi.fn(async () => ({ name: "fake" })),
+  resolveSearchProvider: vi.fn(async () => undefined),
 }));
 vi.mock("@scout/agents", () => ({
-  runChatAgent: vi.fn(),
+  runAgenticChatAgent: vi.fn(),
 }));
 
 let tmpHome: string;
@@ -36,8 +37,8 @@ describe("POST /api/runs/[slug]/chat", () => {
 
   it("saves the user message and the assistant reply on success", async () => {
     await LocalFileStore.create("Chatty Platform", "custom");
-    const { runChatAgent } = await import("@scout/agents");
-    (runChatAgent as ReturnType<typeof vi.fn>).mockResolvedValue({ answer: "The auth scheme is bearer token.", citations: [] });
+    const { runAgenticChatAgent } = await import("@scout/agents");
+    (runAgenticChatAgent as ReturnType<typeof vi.fn>).mockResolvedValue({ answer: "The auth scheme is bearer token.", sources: [] });
 
     const { POST } = await import("./route.js");
     const response = await POST(
@@ -53,8 +54,8 @@ describe("POST /api/runs/[slug]/chat", () => {
 
   it("returns a clear 502 error (not an unhandled crash) when the LLM call fails", async () => {
     await LocalFileStore.create("Misconfigured Platform", "custom");
-    const { runChatAgent } = await import("@scout/agents");
-    (runChatAgent as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Invalid API key"));
+    const { runAgenticChatAgent } = await import("@scout/agents");
+    (runAgenticChatAgent as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Invalid API key"));
 
     const { POST } = await import("./route.js");
     const response = await POST(
@@ -69,8 +70,8 @@ describe("POST /api/runs/[slug]/chat", () => {
 
   it("still persists the user's message even when the reply fails", async () => {
     const { store } = await LocalFileStore.create("Retry Platform", "custom");
-    const { runChatAgent } = await import("@scout/agents");
-    (runChatAgent as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("boom"));
+    const { runAgenticChatAgent } = await import("@scout/agents");
+    (runAgenticChatAgent as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("boom"));
 
     const { POST } = await import("./route.js");
     await POST(

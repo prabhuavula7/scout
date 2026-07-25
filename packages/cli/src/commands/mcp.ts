@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { diffUnderstanding, generateCode, parseAuthScheme, runChatAgent, runCoordinator, runRefresh, runResearchAgent, UnknownWorkflowError } from "@scout/agents";
+import { assembleHandoff, diffUnderstanding, generateCode, parseAuthScheme, runAgenticChatAgent, runCoordinator, runRefresh, runResearchAgent, UnknownWorkflowError } from "@scout/agents";
 import { getConnector, loadConnectorRegistry } from "@scout/connectors";
 import { LocalFileStore } from "@scout/store";
 import type { ImportRequest } from "@scout/types";
@@ -81,7 +81,7 @@ export function createScoutMcpServer(): McpServer {
 
   server.tool(
     "ask_platform",
-    "Ask a grounded, cited question about a platform Scout has already analyzed (see list_platforms for available slugs).",
+    "Ask a grounded question about a platform Scout has already analyzed (see list_platforms for available slugs). Backed by a real multi-turn tool-calling loop: can search the platform's own docs, search the live web (if configured), generate a starter script, or assemble an IDE handoff brief mid-conversation. Every returned source is tagged with where it actually came from: \"docs\" (real similarity score), \"web\" (URL), or \"model_knowledge\" (the model's own general knowledge, unverified against this platform's docs).",
     {
       slug: z.string().describe("The run slug from understand_platform or list_platforms"),
       question: z.string(),
@@ -98,8 +98,9 @@ export function createScoutMcpServer(): McpServer {
 
       await store.appendChatMessage("user", question, []);
       const llm = await resolveLLMProvider();
-      const result = await runChatAgent(store, llm, platformId, question, history);
-      await store.appendChatMessage("assistant", result.answer, result.citations);
+      const searchProvider = await resolveSearchProvider();
+      const result = await runAgenticChatAgent(store, llm, searchProvider, platformId, question, history);
+      await store.appendChatMessage("assistant", result.answer, result.sources);
 
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     },
@@ -247,6 +248,47 @@ export function createScoutMcpServer(): McpServer {
           workflow === undefined ? { lang } : { lang, workflow },
         );
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      } catch (error) {
+        if (error instanceof UnknownWorkflowError) {
+          return {
+            isError: true,
+            content: [{ type: "text", text: JSON.stringify({ error: error.message, validNames: error.validNames }, null, 2) }],
+          };
+        }
+        throw error;
+      }
+    },
+  );
+
+  server.tool(
+    "handoff_platform",
+    "Assemble a paste-ready integration brief for a coding agent: task/workflow steps, the auth handshake, a validated starter script, the .env vars it needs, the exact endpoint it calls, and the pitfalls/gaps Scout's synthesis flagged. Give the returned text directly to Claude Code/Cursor/etc. as the task prompt.",
+    {
+      slug: z.string().describe("The run slug, see list_platforms"),
+      lang: z.enum(["ts", "py"]).describe("Target language for the embedded starter script"),
+      workflow: z.string().optional().describe("A commonWorkflows name to target (defaults to the first workflow)"),
+    },
+    async ({ slug, lang, workflow }) => {
+      const opened = await LocalFileStore.open(slug);
+      if (!opened) {
+        return { isError: true, content: [{ type: "text", text: `No run found for "${slug}".` }] };
+      }
+      const { store } = opened;
+      const understanding = await store.getUnderstanding();
+      if (!understanding) {
+        return { isError: true, content: [{ type: "text", text: `No understanding generated yet for "${slug}".` }] };
+      }
+      const endpoints = await store.getEndpoints();
+      const platform = await store.getPlatform();
+
+      try {
+        const result = await assembleHandoff(
+          understanding,
+          endpoints,
+          { name: platform.name, slug: store.slug, baseUrl: platform.baseUrl, authScheme: parseAuthScheme(platform.authScheme) },
+          workflow === undefined ? { lang } : { lang, workflow },
+        );
+        return { content: [{ type: "text", text: result.markdown }] };
       } catch (error) {
         if (error instanceof UnknownWorkflowError) {
           return {

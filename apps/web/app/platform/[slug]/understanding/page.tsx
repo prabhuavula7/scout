@@ -1,9 +1,9 @@
 "use client";
 
 import { use, useState } from "react";
-import { BrainCircuit, Code2, Search } from "lucide-react";
+import { BrainCircuit, Clipboard, ClipboardCheck, Code2, Search } from "lucide-react";
 import { EmptyState } from "@scout/ui";
-import { useGenerateCode, useRun, useRunResearch } from "@/lib/use-runs";
+import { useGenerateCode, useHandoff, useRun, useRunResearch } from "@/lib/use-runs";
 import { MermaidDiagram } from "@/components/mermaid-diagram";
 import { TableOfContents } from "@/components/table-of-contents";
 import { PipelineProgress } from "@/components/pipeline-progress";
@@ -37,6 +37,7 @@ const SECTIONS = [
   { id: "entity-relationships", label: "Entity relationships" },
   { id: "common-workflows", label: "Common workflows" },
   { id: "starter-code", label: "Starter code" },
+  { id: "ide-handoff", label: "IDE handoff" },
   { id: "sequence-diagram", label: "Sequence diagram" },
   { id: "integration-opportunities", label: "Integration opportunities" },
   { id: "potential-pitfalls", label: "Potential pitfalls" },
@@ -50,7 +51,9 @@ export default function UnderstandingPage({ params }: { params: Promise<{ slug: 
   const { data: run, isLoading } = useRun(slug);
   const research = useRunResearch(slug);
   const generate = useGenerateCode(slug);
+  const handoff = useHandoff(slug);
   const [lang, setLang] = useState<"ts" | "py">("ts");
+  const [copied, setCopied] = useState(false);
   const understanding = run?.understanding;
   const resources = run?.resources ?? [];
 
@@ -156,6 +159,15 @@ export default function UnderstandingPage({ params }: { params: Promise<{ slug: 
               </p>
             </div>
           )}
+          {generate.data && !generate.data.isStub && generate.data.workflowMismatch && (
+            <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+              <p>
+                The targeted workflow needs a write call, which v1 doesn&apos;t generate real code for yet (GET only).
+                This script demonstrates the auth handshake and a basic read call instead, it does not implement that
+                workflow.
+              </p>
+            </div>
+          )}
           {generate.data && !generate.data.isStub && (
             <p className="mt-3 text-xs text-stone-500">
               {generate.data.syntaxValidated
@@ -173,6 +185,61 @@ export default function UnderstandingPage({ params }: { params: Promise<{ slug: 
               <p className="mt-3 text-xs font-medium text-stone-500">.env.example</p>
               <pre className="mt-1 overflow-x-auto rounded-lg border border-stone-200 bg-stone-50 p-4 text-xs dark:border-stone-800 dark:bg-stone-900">
                 <code>{generate.data.envExample}</code>
+              </pre>
+            </>
+          )}
+        </Section>
+        <Section id="ide-handoff" title="IDE handoff">
+          <p className="mb-3 text-xs text-stone-500">
+            Assemble the task, auth handshake, starter script, and known pitfalls into one brief you can paste
+            straight into a coding agent (Claude Code, Cursor, etc.) as its task prompt.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setCopied(false);
+              handoff.mutate({ lang });
+            }}
+            disabled={handoff.isPending}
+            className="flex items-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-stone-50 disabled:opacity-50 dark:border-stone-800 dark:text-stone-300 dark:hover:bg-stone-900"
+          >
+            <BrainCircuit className="h-3 w-3" strokeWidth={2} />
+            {handoff.isPending ? "Assembling…" : `Generate ${lang === "ts" ? "TypeScript" : "Python"} handoff brief`}
+          </button>
+          {handoff.isError && (
+            <p className="mt-2 text-xs text-red-600 dark:text-red-400">{(handoff.error as Error).message}</p>
+          )}
+          {handoff.data && (
+            <>
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-xs text-stone-500">
+                  {handoff.data.workflowUsed
+                    ? `Targeting the "${handoff.data.workflowUsed}" workflow.`
+                    : "No named workflow targeted; wired up a basic authenticated read."}
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(handoff.data!.markdown);
+                    setCopied(true);
+                  }}
+                  className="flex items-center gap-1.5 rounded-lg border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-700 transition hover:bg-stone-50 dark:border-stone-800 dark:text-stone-300 dark:hover:bg-stone-900"
+                >
+                  {copied ? (
+                    <>
+                      <ClipboardCheck className="h-3 w-3" strokeWidth={2} />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Clipboard className="h-3 w-3" strokeWidth={2} />
+                      Copy brief
+                    </>
+                  )}
+                </button>
+              </div>
+              <pre className="mt-2 max-h-96 overflow-auto rounded-lg border border-stone-200 bg-stone-50 p-4 text-xs whitespace-pre-wrap dark:border-stone-800 dark:bg-stone-900">
+                <code>{handoff.data.markdown}</code>
               </pre>
             </>
           )}

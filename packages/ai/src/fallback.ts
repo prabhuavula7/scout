@@ -1,5 +1,11 @@
 import type { z } from "zod";
-import type { CompletionParams, LLMProvider, StructuredCompletionParams } from "./provider.js";
+import type {
+  CompletionParams,
+  LLMProvider,
+  StructuredCompletionParams,
+  ToolCompletionParams,
+  ToolCompletionResult,
+} from "./provider.js";
 
 /**
  * Tries an ordered list of providers per call, falling back to the next one
@@ -62,5 +68,9 @@ export class FallbackLLMProvider implements LLMProvider {
 
   embed(texts: string[]): Promise<number[][]> {
     return this.attempt((provider) => provider.embed(texts));
+  }
+
+  completeWithTools(params: ToolCompletionParams): Promise<ToolCompletionResult> {
+    return this.attempt((provider) => provider.completeWithTools(params));
   }
 }
