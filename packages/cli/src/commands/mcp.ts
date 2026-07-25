@@ -221,7 +221,7 @@ export function createScoutMcpServer(): McpServer {
 
   server.tool(
     "generate_platform",
-    "Generate a runnable starter script (auth handshake + one real read call) from a run's blueprint, in TypeScript or Python. Returns an honest stub instead of fabricated code when the run's auth scheme isn't yet supported for real codegen (v1: api_key_header, bearer_token only) or it has no read endpoints.",
+    "Generate a runnable starter script (auth handshake + one real read call) from a run's blueprint, in TypeScript or Python. Returns an honest stub instead of fabricated code when the run's auth scheme isn't yet supported for real codegen (v1: api_key_header, bearer_token, api_key_query) or it has no read endpoints.",
     {
       slug: z.string().describe("The run slug, see list_platforms"),
       lang: z.enum(["ts", "py"]).describe("Target language"),
