@@ -29,6 +29,8 @@ None of these agents know or care where their data is persisted; they depend on 
 
 `LocalFileStore` (in `packages/store`) is the default `AgentStore` implementation: one directory per run under `~/.scout/runs/<slug>/`, flat JSON files for the current snapshot, append-only JSONL for chat and audit logs, and a `history/` folder of prior understanding snapshots whenever a refresh detects a change (this is also what powers `scout diff`'s drift detection, no separate storage mechanism). Hybrid search (embedding cosine similarity blended with keyword relevance) runs in-memory, no database required.
 
+Chat threads are a thin layer on top of the same run directory: `threads.json` holds each thread's id/title/timestamps, `chat.jsonl` holds every message tagged with a `threadId`, and a run's pre-threads chat history (from before this feature existed) is lazily migrated into a synthesized "Main" thread the first time it's read, rather than requiring a one-time migration script.
+
 This is why a run from a month ago and one from five minutes ago show up identically, and why `scout serve` and the CLI can both read and write the same data without a server in between.
 
 ## Tool-calling, provider-agnostically

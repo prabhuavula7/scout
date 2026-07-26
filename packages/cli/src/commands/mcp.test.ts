@@ -31,7 +31,10 @@ const fakeUnderstanding = {
 };
 
 vi.mock("../config.js", () => ({
-  resolveLLMProvider: vi.fn(async () => ({ name: "fake" })),
+  resolveLLMProvider: vi.fn(async () => ({
+    name: "fake",
+    complete: vi.fn(async () => "- Confirmed pagination uses a cursor param, not page."),
+  })),
   resolveSearchProvider: vi.fn(async () => undefined),
 }));
 
@@ -211,6 +214,37 @@ describe("scout mcp server (end-to-end over the MCP protocol)", () => {
     expect(markdown).toContain("import requests");
     expect(markdown).toContain("REAL_API_API_KEY");
     expect(markdown).toContain("`GET /widgets` -- List widgets");
+  });
+
+  it("handoff_platform folds a named thread's conversation into the brief via ask_platform's own thread history", async () => {
+    const { store, platformId } = await LocalFileStore.create("Threaded API", "custom");
+    await store.upsertUnderstanding(platformId, fakeUnderstanding);
+    const thread = await store.createChatThread("Pagination questions");
+    await store.appendChatMessage(thread.id, "user", "How does pagination work?", []);
+    await store.appendChatMessage(thread.id, "assistant", "It uses a cursor param.", []);
+
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "handoff_platform",
+      arguments: { slug: store.slug, lang: "ts", thread: "Pagination questions" },
+    });
+    expect(result.isError).toBeFalsy();
+    const markdown = firstText(result);
+    expect(markdown).toContain("## Already figured out in chat");
+    expect(markdown).toContain("Confirmed pagination uses a cursor param, not page.");
+  });
+
+  it("handoff_platform reports a clear error for an unknown thread name instead of silently ignoring it", async () => {
+    const { store, platformId } = await LocalFileStore.create("Unknown Thread API", "custom");
+    await store.upsertUnderstanding(platformId, fakeUnderstanding);
+
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "handoff_platform",
+      arguments: { slug: store.slug, lang: "ts", thread: "does-not-exist" },
+    });
+    expect(result.isError).toBe(true);
+    expect(firstText(result)).toContain('No thread named "does-not-exist"');
   });
 
   it("handoff_platform reports an unknown-workflow error the same way generate_platform does", async () => {

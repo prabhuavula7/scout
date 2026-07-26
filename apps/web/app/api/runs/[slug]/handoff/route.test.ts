@@ -1,8 +1,16 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocalFileStore } from "@scout/store";
+
+vi.mock("@/lib/server-config", () => ({
+  resolveLLMProvider: vi.fn(async () => ({
+    name: "fake",
+    complete: vi.fn(async () => "- Confirmed pagination uses a cursor param, not page."),
+  })),
+  resolveSearchProvider: vi.fn(async () => undefined),
+}));
 
 let tmpHome: string;
 
@@ -121,5 +129,68 @@ describe("POST /api/runs/[slug]/handoff", () => {
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.validNames).toEqual(["Real workflow"]);
+  });
+
+  it("folds a thread's conversation into the brief as an LLM-summarized section when threadId is given", async () => {
+    const { store, platformId } = await LocalFileStore.create("Threaded Handoff Platform", "custom");
+    await store.upsertUnderstanding(platformId, {
+      platformId,
+      summary: "s",
+      architectureOverview: "a",
+      authenticationFlow: "auth",
+      dataModel: [],
+      entityRelationships: [],
+      commonWorkflows: [],
+      integrationOpportunities: [],
+      potentialPitfalls: [],
+      missingDocumentation: [],
+      securityObservations: [],
+      mermaidSequenceDiagram: "sequenceDiagram",
+      mermaidErDiagram: "erDiagram",
+      citations: [],
+      generatedAt: new Date().toISOString(),
+    });
+    const thread = await store.createChatThread("Pagination questions");
+    await store.appendChatMessage(thread.id, "user", "How does pagination work?", []);
+    await store.appendChatMessage(thread.id, "assistant", "It uses a cursor query param.", []);
+
+    const { POST } = await import("./route.js");
+    const response = await POST(postRequest({ lang: "ts", threadId: thread.id }), {
+      params: Promise.resolve({ slug: store.slug }),
+    });
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.markdown).toContain("## Already figured out in chat");
+    expect(body.markdown).toContain("Confirmed pagination uses a cursor param, not page.");
+  });
+
+  it("omits the thread-summary section when the given thread has no messages yet", async () => {
+    const { store, platformId } = await LocalFileStore.create("Empty Thread Handoff Platform", "custom");
+    await store.upsertUnderstanding(platformId, {
+      platformId,
+      summary: "s",
+      architectureOverview: "a",
+      authenticationFlow: "auth",
+      dataModel: [],
+      entityRelationships: [],
+      commonWorkflows: [],
+      integrationOpportunities: [],
+      potentialPitfalls: [],
+      missingDocumentation: [],
+      securityObservations: [],
+      mermaidSequenceDiagram: "sequenceDiagram",
+      mermaidErDiagram: "erDiagram",
+      citations: [],
+      generatedAt: new Date().toISOString(),
+    });
+    const thread = await store.createChatThread("Empty thread");
+
+    const { POST } = await import("./route.js");
+    const response = await POST(postRequest({ lang: "ts", threadId: thread.id }), {
+      params: Promise.resolve({ slug: store.slug }),
+    });
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.markdown).not.toContain("## Already figured out in chat");
   });
 });

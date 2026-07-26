@@ -3,13 +3,16 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { SidebarProvider } from "@/components/sidebar-context";
 import SettingsPage from "./page.js";
 
 function renderWithQueryClient() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <SettingsPage />
+      <SidebarProvider>
+        <SettingsPage />
+      </SidebarProvider>
     </QueryClientProvider>,
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, IBM_Plex_Mono, Fraunces } from "next/font/google";
 import { Providers } from "./providers";
 import { Sidebar } from "@/components/sidebar";
+import { SidebarProvider } from "@/components/sidebar-context";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -43,10 +44,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${inter.variable} ${fraunces.variable} ${plexMono.variable} font-sans`}>
         <Providers>
-          <div className="flex">
-            <Sidebar />
-            <div className="min-w-0 flex-1">{children}</div>
-          </div>
+          <SidebarProvider>
+            <div className="flex">
+              <Sidebar />
+              <div className="min-w-0 flex-1">{children}</div>
+            </div>
+          </SidebarProvider>
         </Providers>
       </body>
     </html>

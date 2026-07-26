@@ -46,6 +46,13 @@ export interface ChatMessageRecord {
   createdAt: string;
 }
 
+export interface ChatThreadRecord {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -180,27 +187,71 @@ export interface HandoffResult {
 
 export function useHandoff(slug: string) {
   return useMutation({
-    mutationFn: (input: { lang: "ts" | "py"; workflow?: string }) =>
+    mutationFn: (input: { lang: "ts" | "py"; workflow?: string; threadId?: string }) =>
       request<HandoffResult>(`/api/runs/${slug}/handoff`, { method: "POST", body: JSON.stringify(input) }),
   });
 }
 
-export function useChatMessages(slug: string) {
+export function useChatThreads(slug: string) {
   return useQuery({
-    queryKey: ["chat", slug],
-    queryFn: () => request<ChatMessageRecord[]>(`/api/runs/${slug}/chat`),
+    queryKey: ["chat-threads", slug],
+    queryFn: () => request<ChatThreadRecord[]>(`/api/runs/${slug}/threads`),
     enabled: !!slug,
   });
 }
 
-export function useSendChatMessage(slug: string) {
+export function useCreateChatThread(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (title?: string) =>
+      request<ChatThreadRecord>(`/api/runs/${slug}/threads`, {
+        method: "POST",
+        body: JSON.stringify({ title }),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["chat-threads", slug] }),
+  });
+}
+
+export function useRenameChatThread(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { threadId: string; title: string }) =>
+      request<{ ok: true }>(`/api/runs/${slug}/threads/${input.threadId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ title: input.title }),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["chat-threads", slug] }),
+  });
+}
+
+export function useDeleteChatThread(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (threadId: string) =>
+      request<{ ok: true }>(`/api/runs/${slug}/threads/${threadId}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["chat-threads", slug] }),
+  });
+}
+
+export function useChatMessages(slug: string, threadId: string) {
+  return useQuery({
+    queryKey: ["chat", slug, threadId],
+    queryFn: () => request<ChatMessageRecord[]>(`/api/runs/${slug}/threads/${threadId}/messages`),
+    enabled: !!slug && !!threadId,
+  });
+}
+
+export function useSendChatMessage(slug: string, threadId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (message: string) =>
-      request<ChatMessageRecord>(`/api/runs/${slug}/chat`, {
+      request<ChatMessageRecord>(`/api/runs/${slug}/threads/${threadId}/messages`, {
         method: "POST",
         body: JSON.stringify({ message }),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["chat", slug] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", slug, threadId] });
+      queryClient.invalidateQueries({ queryKey: ["chat-threads", slug] });
+    },
   });
 }

@@ -38,7 +38,13 @@ Rules:
 - Clearly distinguish web_search results from search_docs results when you use both; they are not the same kind of source.
 - Never use em dashes (—) anywhere in your answer; use a comma, period, semicolon, or parentheses instead.`;
 
-const MAX_ITERATIONS = 6;
+// Each iteration is a full LLM round trip and can itself make several tool
+// calls, so this bounds worst-case latency, not cost: every user brings
+// their own API key, and the cap only engages on the rare query that
+// genuinely needs many rounds. 12 gives real headroom for multi-tool
+// questions (e.g. search_docs + web_search + a follow-up search) without
+// letting a runaway loop run for minutes.
+const MAX_ITERATIONS = 12;
 
 const SearchDocsArgs = z.object({ query: z.string().min(1).describe("What to search for in this platform's crawled documentation") });
 const WebSearchArgs = z.object({ query: z.string().min(1).describe("What to search for on the live web") });

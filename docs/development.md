@@ -17,6 +17,10 @@ pnpm --filter @scout/web dev
 
 starts the Next.js dev server at `http://localhost:3000` against your real `~/.scout/runs/` data, useful for iterating on UI without rebuilding the CLI's bundled viewer each time.
 
+## Zero-config LLM key while working from source
+
+The real, provider-agnostic config path is `scout config llm add <kind> --api-key <key>` (persists to `~/.scout/config.json`), which is what published-package users are expected to use. When running from source, Scout also falls back to `OPENAI_API_KEY` (and `OPENAI_CHAT_MODEL` / `OPENAI_EMBEDDING_MODEL` / `TAVILY_API_KEY`) directly from your shell environment if nothing's been configured yet -- so `export OPENAI_API_KEY=sk-...` before `pnpm dev` is enough to get started without running `scout config` first. This fallback only covers OpenAI; every other provider (Anthropic, Azure OpenAI, OpenRouter, self-hosted) requires `scout config llm add`.
+
 ## Docker as a build sanity check
 
 `docker compose up` builds and runs Scout from source, going through the same `pnpm build` + npm-dependency-resolution path a real `npm publish` would. Useful for catching a packaging regression a local `pnpm build` wouldn't, without installing Node/pnpm at all; see [docker.md](docker.md).

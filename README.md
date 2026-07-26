@@ -3,11 +3,11 @@
 [![CI](https://github.com/prabhuavula7/scout/actions/workflows/ci.yml/badge.svg)](https://github.com/prabhuavula7/scout/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Give Claude Code, Cursor, Codex, and Gemini CLI accurate knowledge of any API before they write a line of integration code.**
+**Point Scout at a platform's OpenAPI spec and docs. Get a cited, browsable integration blueprint and a real threaded chat assistant, in a local web app, in minutes.**
 
-Point Scout at a platform's OpenAPI spec and its docs. It crawls the docs, cross-checks them against the spec, and produces a cited, structural understanding: architecture, auth flow, data model, entity relationships, workflows, real pitfalls. Then it hands that understanding to your coding agent through one MCP server, so the agent reasons from what the platform's docs actually say instead of a plausible-sounding guess from training data.
+Scout is primarily a web app: `scout serve` opens it at `http://127.0.0.1`, no login, nothing leaves your machine. It also ships an equally capable CLI and an MCP server, so Claude Code, Cursor, Codex, and Gemini CLI can pull the same grounded understanding directly into their own context instead of guessing at a platform's API shape from training data.
 
-Everything runs on your machine. No account, no hosted backend, no telemetry.
+Everything runs locally. No account, no hosted backend, no telemetry.
 
 ```
 npm install -g @dotapk7/scoutcli
@@ -18,12 +18,12 @@ npm install -g @dotapk7/scoutcli
 ```
 scout config llm add openai --api-key sk-...
 scout understand https://petstore3.swagger.io/api/v3/openapi.json --docs https://example.com/docs
-scout chat petstore-openapi-3-0
+scout serve
 ```
 
-That's it. `scout serve` opens the same thing in a browser if you'd rather not stay in a terminal.
+That opens the web app: a sidebar with Runs, New, Threads, and Settings, a Settings tab if you'd rather add your provider key there than on the command line. Prefer a terminal? `scout chat <slug>` and `scout mcp` give the CLI and any MCP-speaking coding agent the exact same capabilities.
 
-![Scout's understanding of the real Stripe API: summary, architecture, auth flow, and a full table of contents](public/understanding-summary.png)
+![Scout's Runs list: every platform you've pointed it at, with a collapsible sidebar and the Threads tab](public/runs-list.png)
 
 ## The problem
 
@@ -34,11 +34,46 @@ That gap, between what a coding agent assumes and what a platform's docs actuall
 ## What you get
 
 - **Understand Stripe, HubSpot, or any OpenAPI-documented platform in minutes**, not the first afternoon of a new integration.
-- **Give any MCP-speaking coding agent the same grounded understanding** through `scout mcp`, mid-session, no copy-pasting docs into a chat window.
+- **A real chat, with real threads**, Claude/ChatGPT-style: multiple named conversations per platform, not one chat box you have to scroll past to start over.
 - **Ask questions and get cited answers**, never an invented endpoint or field.
 - **Get a real, syntax-checked starter script**, the auth handshake plus one working call, not pseudocode.
-- **Hand your coding agent a paste-ready integration brief**, task, auth, starter code, and known pitfalls in one document.
+- **Hand your coding agent a paste-ready integration brief**, task, auth, starter code, known pitfalls, and (if you point it at one) an LLM-distilled summary of what you already figured out in a chat thread.
+- **Give any MCP-speaking coding agent the same grounded understanding** through `scout mcp`, mid-session, no copy-pasting docs into a chat window.
 - **Know the moment a platform's docs change** instead of finding out in production.
+
+## Threads: a real chat, not a single Q&A box
+
+Chat isn't one conversation per run. Every platform gets its own thread list, Claude/ChatGPT-style: start a new thread per question you're working through, rename it, delete it, switch back to an old one without losing context. The sidebar collapses to icon-only when you want the room, and the panes between Runs, Threads, and the conversation are draggable.
+
+It's a real multi-turn tool-calling loop underneath, not a wrapper around a single prompt: it can search the platform's own crawled docs, search the live web if you've configured a provider, generate starter code, or assemble an IDE handoff brief, mid-conversation. Every answer is tagged with where it actually came from: a doc excerpt with a real similarity score, a live web result with a URL, or the model's own general knowledge, flagged unverified rather than given a fake citation.
+
+![Scout's Threads tab: multiple named conversations per platform, real citations, dark mode](public/threads-dark.png)
+
+![A Threads conversation in light mode, with real generated code inline and citations from the crawled docs](public/threads-light.png)
+
+## A handoff that carries the whole conversation
+
+`scout generate` turns a stored blueprint into a runnable starter script: the auth handshake plus one real, working call, syntax-checked before it's shown to you. When a platform's auth scheme isn't supported yet or the workflow needs a write call, you get a clearly labeled stub and a reason, never fabricated-looking code that quietly does the wrong thing.
+
+![Scout refusing to fabricate write-call code, showing the real read-call skeleton and an explicit warning instead](public/starter-code.png)
+
+`scout handoff` goes one step further: it assembles the task, the auth flow, the starter script, the `.env.example`, and the real pitfalls Scout's synthesis flagged into one Markdown brief you can paste straight into a coding agent as its task prompt, or `--copy` it straight to your clipboard. Point it at a thread (`--thread <name>` on the CLI, a dropdown in the web app, `thread` on the MCP tool) and it folds an LLM-distilled summary of what was actually confirmed in that conversation into the brief, so the next agent that picks up the task doesn't have to re-derive what you already worked out in chat.
+
+![The IDE handoff section folding a real chat thread's findings into the brief before assembling it](public/ide-handoff.png)
+
+Full reference, including the exact auth schemes supported today: [docs/generated-code.md](docs/generated-code.md).
+
+## Every endpoint, at a glance
+
+The API Explorer lists every endpoint the spec declares, method-color-coded, searchable, no scrolling through YAML.
+
+![API Explorer listing every real Stripe endpoint from the imported spec](public/api-explorer.png)
+
+## The full understanding, cited
+
+Architecture, auth flow, data model, entity relationships (rendered as a real diagram), common workflows, pitfalls, security observations, gaps Scout couldn't verify: all generated from the spec and docs you pointed it at, not from a generic template.
+
+![A real Stripe entity-relationship diagram generated from the imported spec, dark mode](public/understanding-entity-diagram.png)
 
 ## AI agents get it too
 
@@ -66,41 +101,11 @@ args = ["mcp"]
 { "mcpServers": { "scout": { "command": "scout", "args": ["mcp"] } } }
 ```
 
-Eleven tools, the same capabilities as the CLI and web app: import a spec, ask a grounded question, refresh a stale run, check what changed, generate a starter script, assemble an IDE handoff brief, export the blueprint, find further reading, clean up. A developer working in Claude Code can say "integrate Stripe invoicing" and the agent pulls real, cited platform knowledge into its own context instead of hallucinating an API shape. Full reference: [docs/mcp.md](docs/mcp.md).
-
-## AI Chat, grounded and cited
-
-The chat isn't a wrapper around a generic model. It runs a real multi-turn tool-calling loop: it can search the platform's own crawled docs, search the live web if you've configured a provider, generate starter code, or assemble an IDE handoff brief, mid-conversation. Every answer is tagged with where it actually came from: a doc excerpt with a real similarity score, a live web result with a URL, or the model's own general knowledge, flagged unverified rather than given a fake citation.
-
-> **You:** How do I authenticate with the Stripe API?
->
-> **Scout:** All API calls must use HTTPS and be authenticated with Stripe API keys. Test mode secret keys start with `sk_test_`... [1] [2] [3] [4]
-
-![AI chat answering a real authentication question with real citations from the crawled Stripe docs](public/ai-chat.png)
-
-Ask it something Scout genuinely can't verify and it says so instead of guessing. Stripe's real auth scheme is HTTP Basic, not Bearer; when a workflow needs a write call Scout's codegen doesn't support yet, it tells you exactly that instead of quietly showing you the wrong thing:
-
-![Scout refusing to fabricate write-call code, showing the real read-call skeleton and an explicit warning instead](public/starter-code.png)
-
-## Generated code, or an honest stub
-
-`scout generate` turns a stored blueprint into a runnable starter script: the auth handshake plus one real, working call, syntax-checked before it's shown to you. When a platform's auth scheme isn't supported yet or the workflow needs a write call, you get a clearly labeled stub and a reason, never fabricated-looking code that quietly does the wrong thing.
-
-`scout handoff` goes one step further: it assembles the task, the auth flow, the starter script, the `.env.example`, and the real pitfalls Scout's synthesis flagged into one Markdown brief you can paste straight into a coding agent as its task prompt, or `--copy` it straight to your clipboard.
-
-![A real IDE handoff brief for HubSpot Contacts: task, auth, starter code, and a sequence diagram, ready to paste into a coding agent](public/ide-handoff.png)
-
-Full reference, including the exact auth schemes supported today: [docs/generated-code.md](docs/generated-code.md).
-
-## Every endpoint, at a glance
-
-The API Explorer lists every endpoint the spec declares, method-color-coded, searchable, no scrolling through YAML.
-
-![API Explorer listing every real Stripe endpoint from the imported spec](public/api-explorer.png)
+Eleven tools, the same capabilities as the CLI and web app: import a spec, ask a grounded question in a named thread, refresh a stale run, check what changed, generate a starter script, assemble an IDE handoff brief (with or without a thread folded in), export the blueprint, find further reading, clean up. A developer working in Claude Code can say "integrate Stripe invoicing" and the agent pulls real, cited platform knowledge into its own context instead of hallucinating an API shape. Full reference: [docs/mcp.md](docs/mcp.md).
 
 ## Real examples
 
-Three platforms verified end-to-end against their real, public specs and docs this session:
+Three platforms verified end-to-end against their real, public specs and docs:
 
 | Platform | Command | What Scout found |
 |---|---|---|
@@ -114,15 +119,15 @@ More platforms, full transcripts, and a walkthrough of the honesty behavior: [do
 
 | Command | What it does |
 |---|---|
+| `scout serve` | The local web app: Runs, New, Threads, API Explorer, Settings. |
 | `scout understand <spec-url-or-path>` | Import a spec, crawl `--docs`, generate the understanding. |
-| `scout chat <slug>` | Agentic chat: real tool-calling, cited answers, never a fabricated citation. |
+| `scout chat <slug> [--thread <name>]` | Agentic terminal chat: real tool-calling, cited answers, real threads. |
 | `scout generate <slug> --lang ts\|py` | A real, syntax-checked starter script, or an honest stub. |
-| `scout handoff <slug> --lang ts\|py [--copy]` | A paste-ready integration brief for a coding agent. |
+| `scout handoff <slug> --lang ts\|py [--thread <name>] [--copy]` | A paste-ready integration brief, optionally folding a thread's findings in. |
 | `scout diff <slug>` | Drift detection: what changed in a run's understanding since its last refresh. |
 | `scout refresh <slug> [--recrawl]` | Regenerate the understanding without a full re-import. |
 | `scout watch <slug>` | Poll a run's docs and refresh automatically when they change. |
 | `scout export <slug> --format md\|json` | Export the blueprint. |
-| `scout serve` | The local web app: Runs, New, AI Chat, API Explorer, Settings. |
 | `scout mcp` | Run Scout as an MCP server for coding agents. |
 
 Full option list on any command: `scout <command> --help`. Everything else, providers, connectors, Docker, architecture, contributing: [docs/](docs/).

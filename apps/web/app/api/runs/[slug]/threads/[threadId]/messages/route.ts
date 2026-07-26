@@ -4,35 +4,41 @@ import { runAgenticChatAgent } from "@scout/agents";
 import { LocalFileStore } from "@scout/store";
 import { resolveLLMProvider, resolveSearchProvider } from "@/lib/server-config";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ slug: string; threadId: string }> },
+) {
+  const { slug, threadId } = await params;
   const opened = await LocalFileStore.open(slug);
   if (!opened) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
-  const messages = await opened.store.getChatHistory();
+  const messages = await opened.store.getChatHistory(threadId);
   return NextResponse.json(messages);
 }
 
 const ChatBody = z.object({ message: z.string().min(1).max(4000) });
 
-export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ slug: string; threadId: string }> },
+) {
+  const { slug, threadId } = await params;
   const opened = await LocalFileStore.open(slug);
   if (!opened) return NextResponse.json({ error: "Run not found" }, { status: 404 });
   const { store, platformId } = opened;
 
   const body = ChatBody.parse(await request.json());
 
-  const priorMessages = await store.getChatHistory();
+  const priorMessages = await store.getChatHistory(threadId);
   const history = priorMessages.map((m) => ({ role: m.role, content: m.content }));
 
-  await store.appendChatMessage("user", body.message, []);
+  await store.appendChatMessage(threadId, "user", body.message, []);
 
   try {
     const llm = await resolveLLMProvider();
     const searchProvider = await resolveSearchProvider();
     const result = await runAgenticChatAgent(store, llm, searchProvider, platformId, body.message, history);
-    const saved = await store.appendChatMessage("assistant", result.answer, result.sources);
+    const saved = await store.appendChatMessage(threadId, "assistant", result.answer, result.sources);
     return NextResponse.json(saved);
   } catch (error) {
     // The user's message is already saved above; only the reply failed

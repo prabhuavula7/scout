@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { LocalFileStore } from "./local-file-store.js";
+import { DEFAULT_THREAD_ID, LocalFileStore } from "./local-file-store.js";
 
 let tmpHome: string;
 
@@ -82,6 +82,71 @@ describe("LocalFileStore", () => {
 
     const runs = await LocalFileStore.list();
     expect(runs.map((r) => r.slug)).toEqual(["newer", "older"]);
+  });
+
+  describe("chat threads", () => {
+    it("has no threads for a fresh run", async () => {
+      const { store } = await LocalFileStore.create("Fresh", "fresh");
+      expect(await store.listChatThreads()).toEqual([]);
+    });
+
+    it("creates, lists, renames, and deletes threads", async () => {
+      const { store } = await LocalFileStore.create("Threaded", "threaded");
+      const first = await store.createChatThread("First");
+      const second = await store.createChatThread();
+      expect(second.title).toBe("New thread");
+
+      const listed = await store.listChatThreads();
+      expect(listed.map((t) => t.id).sort()).toEqual([first.id, second.id].sort());
+
+      await store.renameChatThread(first.id, "Renamed");
+      expect((await store.listChatThreads()).find((t) => t.id === first.id)?.title).toBe("Renamed");
+
+      await store.deleteChatThread(second.id);
+      expect((await store.listChatThreads()).map((t) => t.id)).toEqual([first.id]);
+    });
+
+    it("scopes messages to their own thread", async () => {
+      const { store } = await LocalFileStore.create("Scoped", "scoped");
+      const other = await store.createChatThread("Other");
+
+      await store.appendChatMessage(DEFAULT_THREAD_ID, "user", "hello main", []);
+      await store.appendChatMessage(other.id, "user", "hello other", []);
+
+      expect((await store.getChatHistory(DEFAULT_THREAD_ID)).map((m) => m.content)).toEqual(["hello main"]);
+      expect((await store.getChatHistory(other.id)).map((m) => m.content)).toEqual(["hello other"]);
+    });
+
+    it("migrates pre-threads chat history into a synthesized Main thread", async () => {
+      const { store } = await LocalFileStore.create("Legacy", "legacy");
+      // Simulate a message written before threadId existed.
+      await fs.appendFile(
+        path.join(store.dir, "chat.jsonl"),
+        `${JSON.stringify({ id: "legacy-1", role: "user", content: "old message", citations: [], createdAt: new Date().toISOString() })}\n`,
+        "utf-8",
+      );
+
+      const threads = await store.listChatThreads();
+      expect(threads).toHaveLength(1);
+      expect(threads[0]!.id).toBe(DEFAULT_THREAD_ID);
+      expect(threads[0]!.title).toBe("Main");
+
+      const history = await store.getChatHistory(DEFAULT_THREAD_ID);
+      expect(history.map((m) => m.content)).toEqual(["old message"]);
+    });
+
+    it("bumps a thread's updatedAt and sorts listChatThreads newest-first", async () => {
+      const { store } = await LocalFileStore.create("Ordered", "ordered");
+      const first = await store.createChatThread("First");
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await store.appendChatMessage(first.id, "user", "hi", []);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      const second = await store.createChatThread("Second");
+
+      const listed = await store.listChatThreads();
+      expect(listed[0]!.id).toBe(second.id);
+      expect(listed[1]!.id).toBe(first.id);
+    });
   });
 
   describe("getRepresentativeDocChunks", () => {

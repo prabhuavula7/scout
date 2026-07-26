@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useConnectors, useCreateRun, useEstimateCrawl } from "@/lib/use-runs";
 import { GettingStartedBanner } from "@/components/getting-started-banner";
+import { useSidebarCollapsed } from "@/components/sidebar-context";
 
 const inputClass =
   "w-full rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100";
@@ -15,6 +16,7 @@ export default function NewRunPage() {
   const { data: connectors } = useConnectors();
   const createRun = useCreateRun();
   const estimateCrawl = useEstimateCrawl();
+  const collapsed = useSidebarCollapsed();
 
   const [sourceMode, setSourceMode] = useState<"url" | "raw">("url");
   const [source, setSource] = useState("");
@@ -70,7 +72,7 @@ export default function NewRunPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-10">
+    <main className={`mx-auto px-6 py-10 transition-[max-width] duration-200 ${collapsed ? "max-w-3xl" : "max-w-2xl"}`}>
       <h1 className="font-serif text-2xl font-medium tracking-tight">New understanding</h1>
       <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
         Point Scout at an OpenAPI/Swagger spec and, optionally, documentation pages to crawl for grounded chat. Runs

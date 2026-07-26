@@ -8,11 +8,16 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+import { SidebarProvider } from "@/components/sidebar-context";
 import NewRunPage from "./page.js";
 
 function renderWithQueryClient(ui: React.ReactElement) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <SidebarProvider>{ui}</SidebarProvider>
+    </QueryClientProvider>,
+  );
 }
 
 describe("NewRunPage", () => {

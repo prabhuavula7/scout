@@ -37,7 +37,7 @@ This is the same honesty principle as everything else in Scout: the code that's 
 ## `scout handoff`
 
 ```
-scout handoff <slug> --lang ts|py [--workflow <name>] [--out <path>] [--copy]
+scout handoff <slug> --lang ts|py [--workflow <name>] [--out <path>] [--copy] [--thread <name>]
 ```
 
 Bundles the task and workflow steps, the auth flow, the exact starter script `scout generate` would produce, its `.env.example`, the specific endpoint used, and the real pitfalls and security observations Scout's synthesis flagged, into one Markdown brief. Paste it into Claude Code, Cursor, or any coding agent as the task prompt, and it has everything it needs to start, without you re-reading the blueprint and hand-assembling the context yourself.
@@ -45,6 +45,12 @@ Bundles the task and workflow steps, the auth flow, the exact starter script `sc
 `--copy` sends the brief straight to your system clipboard (`pbcopy` on macOS, `clip` on Windows, `wl-copy`/`xclip`/`xsel` on Linux, whichever your platform actually has) instead of printing it. If no clipboard tool is available, it prints a clear error and falls back to stdout rather than failing silently.
 
 Spec- and LLM-derived text in the brief is sanitized against markdown fence-break injection: a run of three or more backticks embedded in a pitfall or workflow step can't close the document's code fence early and inject content past it, since this brief is designed to be pasted directly into an agentic tool.
+
+### Folding a thread into the brief
+
+`--thread <name>` (the CLI matches by title, creating it if it's genuinely new; the web app's IDE handoff section has a dropdown of existing threads instead; the MCP tool takes `thread` as a title) looks up that thread's message history and makes one extra LLM call to distill it into an "Already figured out in chat" section at the top of the brief, above the Task section: specific endpoints discussed, auth details confirmed, decisions made, workarounds found. Not the raw transcript, a summary, so the brief stays readable instead of dumping a full conversation log into a coding agent's context.
+
+An empty thread, or one that never got past generic Q&A, yields no section at all rather than a padded-out one; there's nothing dishonest about a handoff that just says less when there's less to say.
 
 ## Same function, three surfaces
 

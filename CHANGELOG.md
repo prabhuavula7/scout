@@ -4,6 +4,19 @@ All notable changes to Scout are documented here. Format loosely follows [Keep a
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-07-26
+
+### Added
+
+- **Threads**: chat is no longer one conversation per run. `packages/store`'s `LocalFileStore` gained `ChatThreadRecord` and thread-scoped `appendChatMessage`/`getChatHistory`/`listChatThreads`/`createChatThread`/`renameChatThread`/`deleteChatThread`; pre-threads `chat.jsonl` history is lazily migrated into a synthesized "Main" thread the first time a run's threads are read, so no existing conversation disappears. A new top-level Threads tab (`/threads`) lists every run and its threads across draggable, resizable panes (Runs, Threads, and the conversation itself), with create/rename/delete; the CLI (`scout chat <slug> --thread <name>`) and MCP (`ask_platform`'s `thread` param) gained matching scoping, defaulting to "Main" so nothing that predates this feature breaks. Verified against a real prior Stripe conversation (migrated correctly) and a fresh multi-thread HubSpot/Stripe session, including a real ~36s round trip mixing `search_docs` and live `web_search` in a non-default thread.
+- **Thread-aware handoff**: `scout handoff --thread <name>`, `handoff_platform`'s `thread` param, and a thread dropdown in the web app's IDE-handoff section fold a thread's conversation into the brief as an LLM-distilled "Already figured out in chat" section (`summarizeThreadForHandoff`, one extra `LLMProvider.complete` call over the transcript, not the raw transcript pasted in). An empty or purely exploratory thread yields no section, not a padded-out one. Verified live: distilling a real Stripe payouts conversation correctly surfaced the specific `Stripe-Account` header requirement, the real Account Links onboarding endpoint and payload shape, and the exact decision point the conversation left unresolved.
+- **Collapsible, resizable web UI**: the sidebar collapses to icon-only via a circular chevron toggle (state persisted to localStorage); every page's own content width grows by one step to use the reclaimed space instead of leaving it as dead margin. The Threads page's Runs↔Threads and Threads↔Chat panes are independently draggable (each a visible divider, not just an invisible hover target) and persisted per-column.
+- The agentic chat's tool-calling iteration cap (`MAX_ITERATIONS`) raised from 6 to 12: it only bounds worst-case latency (every user brings their own API key, so there's no shared cost at risk), and the cap only engages on the rare query that genuinely needs many tool-calling rounds.
+
+### Fixed
+
+- **A real layout bug on the Threads page**: `py-8` padding and `h-[calc(100vh-4rem)]` on the same border-box element double-subtracted the padding, leaving a dead gap below the chat composer. Fixed by switching to `h-screen` now that padding lives on the same sized element correctly.
+
 ## [2.1.1] - 2026-07-25
 
 ### Fixed

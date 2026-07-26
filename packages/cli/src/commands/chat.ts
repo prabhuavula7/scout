@@ -4,6 +4,7 @@ import { Command } from "commander";
 import { runAgenticChatAgent } from "@scout/agents";
 import { LocalFileStore } from "@scout/store";
 import { resolveLLMProvider, resolveSearchProvider } from "../config.js";
+import { resolveThread } from "../resolve-thread.js";
 
 function describeSource(source: { type: "docs" | "web" | "model_knowledge"; ref: string; title?: string }): string {
   if (source.type === "docs") return `${source.title ?? source.ref} (${source.ref})`;
@@ -16,7 +17,8 @@ export function registerChatCommand(program: Command): void {
     .command("chat")
     .description("Chat with a platform, grounded in its indexed documentation, with real tool access (search, codegen, handoff briefs) and sourced answers")
     .argument("<slug>", "the run slug, see `scout list`")
-    .action(async (slug: string) => {
+    .option("--thread <name>", "chat in a named thread instead of the default \"Main\" one; creates it if it doesn't exist yet")
+    .action(async (slug: string, options: { thread?: string }) => {
       const opened = await LocalFileStore.open(slug);
       if (!opened) {
         console.error(`No run found for "${slug}". Run \`scout list\` to see what's available.`);
@@ -27,10 +29,11 @@ export function registerChatCommand(program: Command): void {
       const llm = await resolveLLMProvider();
       const searchProvider = await resolveSearchProvider();
 
-      const priorMessages = await store.getChatHistory();
+      const thread = await resolveThread(store, options.thread);
+      const priorMessages = await store.getChatHistory(thread.id);
       const history = priorMessages.map((m) => ({ role: m.role, content: m.content }));
 
-      console.log(`Chatting about "${(await store.getPlatform()).name}". Type "exit" to quit.\n`);
+      console.log(`Chatting about "${(await store.getPlatform()).name}" (thread: ${thread.title}). Type "exit" to quit.\n`);
       const rl = readline.createInterface({ input: stdin, output: stdout });
 
       try {
@@ -44,9 +47,9 @@ export function registerChatCommand(program: Command): void {
           if (message.trim().toLowerCase() === "exit") break;
           if (!message.trim()) continue;
 
-          await store.appendChatMessage("user", message, []);
+          await store.appendChatMessage(thread.id, "user", message, []);
           const result = await runAgenticChatAgent(store, llm, searchProvider, platformId, message, history);
-          await store.appendChatMessage("assistant", result.answer, result.sources);
+          await store.appendChatMessage(thread.id, "assistant", result.answer, result.sources);
 
           history.push({ role: "user", content: message }, { role: "assistant", content: result.answer });
           console.log(`\n${result.answer}\n`);

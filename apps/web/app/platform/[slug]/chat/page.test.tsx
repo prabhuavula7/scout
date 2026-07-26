@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { Suspense } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { SidebarProvider } from "@/components/sidebar-context";
 import ChatPage from "./page.js";
 
 async function renderWithQueryClient(slug: string) {
@@ -16,9 +17,11 @@ async function renderWithQueryClient(slug: string) {
   await act(async () => {
     render(
       <QueryClientProvider client={queryClient}>
-        <Suspense fallback={null}>
-          <ChatPage params={Promise.resolve({ slug })} />
-        </Suspense>
+        <SidebarProvider>
+          <Suspense fallback={null}>
+            <ChatPage params={Promise.resolve({ slug })} />
+          </Suspense>
+        </SidebarProvider>
       </QueryClientProvider>,
     );
   });

@@ -41,21 +41,26 @@ Scout prints a size estimate first, imports the spec, crawls the docs (following
 ## 4. Use it
 
 ```
-scout chat petstore-openapi-3-0
+scout serve
 ```
 
-Ask a real question. The agentic chat will search the crawled docs (and the live web, if you've configured a search provider), cite what it finds, and tell you plainly when something isn't in the docs instead of guessing.
+Opens the web app at `http://127.0.0.1:4207` (127.0.0.1 only by default, no login). The sidebar has Runs, New, Threads, and Settings; a "New" tab runs the same pipeline as `scout understand` without touching the terminal again.
+
+![The Runs list: every platform you've pointed Scout at, stored locally, with the collapsible sidebar and Threads tab](../public/runs-list.png)
+
+Open **Threads** and start asking questions. Every platform gets its own thread list, Claude/ChatGPT-style: start a new named thread per question you're working through, switch back to an old one, delete it when you're done. It's a real multi-turn tool-calling loop, not a single prompt: it searches the crawled docs (and the live web, if you've configured a search provider), cites what it finds, and tells you plainly when something isn't in the docs instead of guessing.
+
+![The full understanding: summary, architecture, auth flow, and a table of contents](../public/understanding-summary.png)
+
+Prefer a terminal? The CLI has the exact same capabilities:
 
 ```
+scout chat petstore-openapi-3-0 --thread "auth questions"
 scout generate petstore-openapi-3-0 --lang ts
-scout handoff petstore-openapi-3-0 --lang ts --copy
+scout handoff petstore-openapi-3-0 --lang ts --thread "auth questions" --copy
 ```
 
-`generate` gives you a real, syntax-checked starter script. `handoff` bundles that script with the task, auth flow, and known pitfalls into one brief, `--copy` puts it straight on your clipboard, ready to paste into Claude Code, Cursor, or whichever coding agent you're using.
-
-Prefer a browser? `scout serve` opens the same thing at `http://127.0.0.1:4207` (127.0.0.1 only by default, no login) with a "New" tab that runs the same pipeline without touching the terminal again.
-
-![The Runs list: every platform you've pointed Scout at, stored locally](../public/runs-list.png)
+`generate` gives you a real, syntax-checked starter script. `handoff` bundles that script with the task, auth flow, and known pitfalls into one brief; pointing it at a thread folds an LLM-distilled summary of what that conversation actually confirmed into the brief too. `--copy` puts it straight on your clipboard, ready to paste into Claude Code, Cursor, or whichever coding agent you're using.
 
 ![Settings: LLM and search providers, configured once, keys never shown again](../public/settings.png)
 

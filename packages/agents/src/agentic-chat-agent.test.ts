@@ -252,7 +252,7 @@ describe("runAgenticChatAgent (real tool dispatch, scripted LLM turns)", () => {
 
   it("surfaces an honest message instead of an infinite loop when the model never stops calling tools", async () => {
     const { store, platformId } = await seedRun();
-    const turns: ToolCompletionResult[] = Array.from({ length: 10 }, (_, i) => ({
+    const turns: ToolCompletionResult[] = Array.from({ length: 20 }, (_, i) => ({
       text: null,
       toolCalls: [toolCall("search_docs", { query: "auth" }, `call-${i}`)],
     }));

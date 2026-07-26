@@ -1,8 +1,8 @@
 # Scout
 
-**Give Claude Code, Cursor, Codex, and Gemini CLI accurate knowledge of any API before they write a line of integration code.**
+**Point Scout at a platform's OpenAPI spec and docs. Get a cited, browsable integration blueprint and a real threaded chat assistant, in a local web app, in minutes.**
 
-Point Scout at a platform's OpenAPI spec and its docs. It crawls the docs, cross-checks them against the spec, and produces a cited, structural understanding, architecture, auth flow, data model, workflows, real pitfalls, then hands it to your coding agent through one MCP server. Runs entirely on your machine. No account, no hosted backend, no telemetry.
+This package installs `scout`: primarily a local web app (`scout serve`), plus an equally capable CLI and an MCP server so Claude Code, Cursor, Codex, and Gemini CLI can pull the same grounded understanding directly into their own context instead of guessing at a platform's API shape from training data. Runs entirely on your machine. No account, no hosted backend, no telemetry.
 
 ## Install
 
@@ -20,11 +20,10 @@ scout config llm add openai --api-key sk-...
 
 # 2. Point it at a spec
 scout understand https://petstore3.swagger.io/api/v3/openapi.json --docs https://example.com/docs
-scout chat petstore-openapi-3-0
 scout serve
 ```
 
-Prefer a browser to a terminal? Skip straight to `scout serve` and add a provider from the Settings tab instead, no config step needed first.
+`scout serve` opens the web app: Runs, New, Threads (real Claude/ChatGPT-style multi-conversation chat per platform, not one chat box), and Settings. Prefer a terminal? `scout chat petstore-openapi-3-0 --thread "auth questions"` gives the CLI the exact same agentic, cited, thread-scoped chat. Skip the config step entirely and add a provider from the Settings tab instead if you'd rather not touch the command line at all.
 
 ## Core commands
 
@@ -32,12 +31,12 @@ Prefer a browser to a terminal? Skip straight to `scout serve` and add a provide
 |---|---|
 | `scout understand <spec-url-or-path>` | Import a spec, crawl `--docs`, generate the understanding. `--docs-depth <n>` (default 2) follows same-site links that many hops past each `--docs` URL; `--docs-max-pages <n>` (default 50) caps the total regardless of depth. |
 | `scout list` / `scout rm <slug>` | List every run, or delete one and everything under it. |
-| `scout chat <slug>` | Agentic terminal chat REPL: real multi-turn tool-calling (search this platform's docs, search the live web if configured, generate starter code, assemble an IDE handoff brief), not single-shot RAG. Every source is tagged docs (real score) / web (URL) / model_knowledge (unverified). |
+| `scout chat <slug> [--thread <name>]` | Agentic terminal chat REPL: real multi-turn tool-calling (search this platform's docs, search the live web if configured, generate starter code, assemble an IDE handoff brief), not single-shot RAG. `--thread` scopes the conversation to a named thread (creating it if it's new) instead of the default "Main" one. Every source is tagged docs (real score) / web (URL) / model_knowledge (unverified). |
 | `scout refresh <slug> [--recrawl]` | Regenerate a run's understanding without re-importing the spec; `--recrawl` also re-fetches its doc URLs first. |
 | `scout diff <slug> [--json]` | Show what changed in a run's understanding since its last refresh: narrative sections that changed, and workflows/data-model entities/pitfalls/integration opportunities added or removed. |
 | `scout export <slug> --format md\|json` | Export the understanding as Markdown or JSON. |
 | `scout generate <slug> --lang ts\|py [--workflow <name>] [--out <path>]` | Generate a runnable starter script (auth handshake + one real read call) from the blueprint. Falls back to an honest stub, not fabricated code, when the run's auth scheme isn't yet supported (v1: API-key-header, Bearer token, API-key-query) or it has no read endpoints. `--list-workflows` prints available workflow names instead of generating. Real (non-stub) output is syntax-checked (`node --check`/`python3 -m py_compile`) before being returned. |
-| `scout handoff <slug> --lang ts\|py [--workflow <name>] [--out <path>] [--copy]` | Assemble a paste-ready Markdown brief for a coding agent: task/workflow steps, auth handshake, the same starter script `scout generate` produces, its `.env.example`, the exact endpoint used, and the pitfalls/security observations/gaps Scout flagged. `--copy` sends it straight to your system clipboard instead of printing it. |
+| `scout handoff <slug> --lang ts\|py [--workflow <name>] [--out <path>] [--copy] [--thread <name>]` | Assemble a paste-ready Markdown brief for a coding agent: task/workflow steps, auth handshake, the same starter script `scout generate` produces, its `.env.example`, the exact endpoint used, and the pitfalls/security observations/gaps Scout flagged. `--copy` sends it straight to your system clipboard instead of printing it. `--thread` folds that thread's conversation in as an LLM-distilled "already figured out in chat" section. |
 | `scout watch <slug>` | Poll the run's doc URLs, re-run the pipeline automatically when they change. |
 | `scout research <slug>` | Find related articles and tutorials via a configured search provider. |
 | `scout serve` | Start the local web viewer at `127.0.0.1` (no login, not reachable from outside the machine by default). |

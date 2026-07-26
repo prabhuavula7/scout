@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { StatusBadge } from "@scout/ui";
 import { useRun, useRefreshRun } from "@/lib/use-runs";
+import { useSidebarCollapsed } from "@/components/sidebar-context";
 
 const TABS = [
   { slug: "explorer", label: "API Explorer" },
@@ -25,12 +26,13 @@ export default function PlatformLayout({
   const pathname = usePathname();
   const { data: run } = useRun(slug);
   const refresh = useRefreshRun(slug);
+  const collapsed = useSidebarCollapsed();
 
   const activeTab = TABS.find((t) => pathname.includes(`/${t.slug}`))?.slug ?? "understanding";
   const isBusy = run?.platform.status ? !["ready", "failed"].includes(run.platform.status) : false;
 
   return (
-    <div className="mx-auto max-w-6xl px-8 py-8">
+    <div className={`mx-auto px-8 py-8 transition-[max-width] duration-200 ${collapsed ? "max-w-7xl" : "max-w-6xl"}`}>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-serif text-xl font-medium">{run?.platform.name ?? slug}</h1>

@@ -40,11 +40,25 @@ export interface PlatformRecord {
 
 export interface ChatMessageRecord {
   id: string;
+  /** Which thread this message belongs to. Absent on messages written before
+   * threads existed; readers should treat a missing threadId as DEFAULT_THREAD_ID. */
+  threadId?: string;
   role: ChatRole;
   content: string;
   citations: unknown[];
   createdAt: string;
 }
+
+export interface ChatThreadRecord {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** The thread every pre-threads chat.jsonl history is migrated into, so
+ * existing conversations don't disappear when this feature ships. */
+export const DEFAULT_THREAD_ID = "main";
 
 export interface AgentRunRecord {
   id: string;
@@ -303,24 +317,108 @@ export class LocalFileStore implements AgentStore {
     void platformId;
   }
 
-  async appendChatMessage(role: ChatRole, content: string, citations: unknown[]): Promise<ChatMessageRecord> {
+  private async readAllChatMessages(): Promise<ChatMessageRecord[]> {
+    const raw = await fs.readFile(path.join(this.dir, "chat.jsonl"), "utf-8").catch(() => "");
+    return raw
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as ChatMessageRecord);
+  }
+
+  private async getThreadsRaw(): Promise<ChatThreadRecord[]> {
+    return readJson<ChatThreadRecord[]>(path.join(this.dir, "threads.json"), []);
+  }
+
+  private async touchThread(threadId: string): Promise<void> {
+    const threads = await this.getThreadsRaw();
+    const now = new Date().toISOString();
+    const idx = threads.findIndex((t) => t.id === threadId);
+    if (idx >= 0) {
+      threads[idx] = { ...threads[idx]!, updatedAt: now };
+    } else {
+      threads.push({
+        id: threadId,
+        title: threadId === DEFAULT_THREAD_ID ? "Main" : "New thread",
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    await writeJson(path.join(this.dir, "threads.json"), threads);
+  }
+
+  /** Lists this run's chat threads, synthesizing a "Main" thread on first
+   * read if pre-threads chat.jsonl history exists but no threads.json has
+   * been written yet, so existing conversations surface instead of vanishing. */
+  async listChatThreads(): Promise<ChatThreadRecord[]> {
+    const threads = await this.getThreadsRaw();
+    if (threads.length > 0) return [...threads].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+    const legacy = await this.readAllChatMessages();
+    if (legacy.length === 0) return [];
+
+    const platform = await this.getPlatform();
+    const main: ChatThreadRecord = {
+      id: DEFAULT_THREAD_ID,
+      title: "Main",
+      createdAt: legacy[0]?.createdAt ?? platform.createdAt,
+      updatedAt: legacy.at(-1)?.createdAt ?? platform.updatedAt,
+    };
+    await writeJson(path.join(this.dir, "threads.json"), [main]);
+    return [main];
+  }
+
+  async createChatThread(title?: string): Promise<ChatThreadRecord> {
+    const threads = await this.listChatThreads();
+    const now = new Date().toISOString();
+    const record: ChatThreadRecord = {
+      id: randomUUID(),
+      title: title?.trim() || "New thread",
+      createdAt: now,
+      updatedAt: now,
+    };
+    await writeJson(path.join(this.dir, "threads.json"), [...threads, record]);
+    return record;
+  }
+
+  async renameChatThread(threadId: string, title: string): Promise<void> {
+    const threads = await this.listChatThreads();
+    const next = threads.map((t) => (t.id === threadId ? { ...t, title, updatedAt: new Date().toISOString() } : t));
+    await writeJson(path.join(this.dir, "threads.json"), next);
+  }
+
+  /** Removes the thread from the list; its messages stay in chat.jsonl
+   * (unreachable via getChatHistory's filter) rather than being rewritten
+   * out of the file, since JSONL isn't designed for in-place deletion. */
+  async deleteChatThread(threadId: string): Promise<void> {
+    const threads = await this.listChatThreads();
+    await writeJson(
+      path.join(this.dir, "threads.json"),
+      threads.filter((t) => t.id !== threadId),
+    );
+  }
+
+  async appendChatMessage(
+    threadId: string,
+    role: ChatRole,
+    content: string,
+    citations: unknown[],
+  ): Promise<ChatMessageRecord> {
     const record: ChatMessageRecord = {
       id: randomUUID(),
+      threadId,
       role,
       content,
       citations,
       createdAt: new Date().toISOString(),
     };
     await appendJsonl(path.join(this.dir, "chat.jsonl"), record);
+    await this.touchThread(threadId);
     return record;
   }
 
-  async getChatHistory(): Promise<ChatMessageRecord[]> {
-    const raw = await fs.readFile(path.join(this.dir, "chat.jsonl"), "utf-8").catch(() => "");
-    return raw
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => JSON.parse(line) as ChatMessageRecord);
+  async getChatHistory(threadId: string): Promise<ChatMessageRecord[]> {
+    const all = await this.readAllChatMessages();
+    return all.filter((m) => (m.threadId ?? DEFAULT_THREAD_ID) === threadId);
   }
 
   async startAgentRun(params: {

@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import { BrainCircuit, Clipboard, ClipboardCheck, Code2, Search } from "lucide-react";
 import { EmptyState } from "@scout/ui";
-import { useGenerateCode, useHandoff, useRun, useRunResearch } from "@/lib/use-runs";
+import { useChatThreads, useGenerateCode, useHandoff, useRun, useRunResearch } from "@/lib/use-runs";
 import { MermaidDiagram } from "@/components/mermaid-diagram";
 import { TableOfContents } from "@/components/table-of-contents";
 import { PipelineProgress } from "@/components/pipeline-progress";
@@ -52,8 +52,10 @@ export default function UnderstandingPage({ params }: { params: Promise<{ slug: 
   const research = useRunResearch(slug);
   const generate = useGenerateCode(slug);
   const handoff = useHandoff(slug);
+  const { data: threads } = useChatThreads(slug);
   const [lang, setLang] = useState<"ts" | "py">("ts");
   const [copied, setCopied] = useState(false);
+  const [handoffThreadId, setHandoffThreadId] = useState("");
   const understanding = run?.understanding;
   const resources = run?.resources ?? [];
 
@@ -194,11 +196,28 @@ export default function UnderstandingPage({ params }: { params: Promise<{ slug: 
             Assemble the task, auth handshake, starter script, and known pitfalls into one brief you can paste
             straight into a coding agent (Claude Code, Cursor, etc.) as its task prompt.
           </p>
+          {threads && threads.length > 0 && (
+            <label className="mb-3 flex items-center gap-2 text-xs text-stone-500">
+              Fold in a thread's conversation:
+              <select
+                value={handoffThreadId}
+                onChange={(e) => setHandoffThreadId(e.target.value)}
+                className="rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs text-stone-700 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300"
+              >
+                <option value="">None (blueprint only)</option>
+                {threads.map((thread) => (
+                  <option key={thread.id} value={thread.id}>
+                    {thread.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <button
             type="button"
             onClick={() => {
               setCopied(false);
-              handoff.mutate({ lang });
+              handoff.mutate({ lang, ...(handoffThreadId ? { threadId: handoffThreadId } : {}) });
             }}
             disabled={handoff.isPending}
             className="flex items-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-stone-50 disabled:opacity-50 dark:border-stone-800 dark:text-stone-300 dark:hover:bg-stone-900"

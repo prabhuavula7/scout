@@ -2,9 +2,9 @@ import { Command } from "commander";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { assembleHandoff, diffUnderstanding, generateCode, parseAuthScheme, runAgenticChatAgent, runCoordinator, runRefresh, runResearchAgent, UnknownWorkflowError } from "@scout/agents";
+import { assembleHandoff, diffUnderstanding, generateCode, parseAuthScheme, runAgenticChatAgent, runCoordinator, runRefresh, runResearchAgent, summarizeThreadForHandoff, UnknownWorkflowError } from "@scout/agents";
 import { getConnector, loadConnectorRegistry } from "@scout/connectors";
-import { LocalFileStore } from "@scout/store";
+import { DEFAULT_THREAD_ID, LocalFileStore } from "@scout/store";
 import type { ImportRequest } from "@scout/types";
 import { resolveLLMProvider, resolveSearchProvider } from "../config.js";
 import { resolveSourceKind } from "../source-kind.js";
@@ -81,26 +81,31 @@ export function createScoutMcpServer(): McpServer {
 
   server.tool(
     "ask_platform",
-    "Ask a grounded question about a platform Scout has already analyzed (see list_platforms for available slugs). Backed by a real multi-turn tool-calling loop: can search the platform's own docs, search the live web (if configured), generate a starter script, or assemble an IDE handoff brief mid-conversation. Every returned source is tagged with where it actually came from: \"docs\" (real similarity score), \"web\" (URL), or \"model_knowledge\" (the model's own general knowledge, unverified against this platform's docs).",
+    "Ask a grounded question about a platform Scout has already analyzed (see list_platforms for available slugs). Backed by a real multi-turn tool-calling loop: can search the platform's own docs, search the live web (if configured), generate a starter script, or assemble an IDE handoff brief mid-conversation. Every returned source is tagged with where it actually came from: \"docs\" (real similarity score), \"web\" (URL), or \"model_knowledge\" (the model's own general knowledge, unverified against this platform's docs). Conversations are scoped to a thread (default \"main\"); pass a different `thread` id to keep separate conversations about the same platform from bleeding into each other's history.",
     {
       slug: z.string().describe("The run slug from understand_platform or list_platforms"),
       question: z.string(),
+      thread: z
+        .string()
+        .optional()
+        .describe('Thread ID to scope this conversation to. Omit for the default "main" thread.'),
     },
-    async ({ slug, question }) => {
+    async ({ slug, question, thread }) => {
       const opened = await LocalFileStore.open(slug);
       if (!opened) {
         return { isError: true, content: [{ type: "text", text: `No run found for "${slug}".` }] };
       }
       const { store, platformId } = opened;
+      const threadId = thread ?? DEFAULT_THREAD_ID;
 
-      const priorMessages = await store.getChatHistory();
+      const priorMessages = await store.getChatHistory(threadId);
       const history = priorMessages.map((m) => ({ role: m.role, content: m.content }));
 
-      await store.appendChatMessage("user", question, []);
+      await store.appendChatMessage(threadId, "user", question, []);
       const llm = await resolveLLMProvider();
       const searchProvider = await resolveSearchProvider();
       const result = await runAgenticChatAgent(store, llm, searchProvider, platformId, question, history);
-      await store.appendChatMessage("assistant", result.answer, result.sources);
+      await store.appendChatMessage(threadId, "assistant", result.answer, result.sources);
 
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     },
@@ -262,13 +267,14 @@ export function createScoutMcpServer(): McpServer {
 
   server.tool(
     "handoff_platform",
-    "Assemble a paste-ready integration brief for a coding agent: task/workflow steps, the auth handshake, a validated starter script, the .env vars it needs, the exact endpoint it calls, and the pitfalls/gaps Scout's synthesis flagged. Give the returned text directly to Claude Code/Cursor/etc. as the task prompt.",
+    "Assemble a paste-ready integration brief for a coding agent: task/workflow steps, the auth handshake, a validated starter script, the .env vars it needs, the exact endpoint it calls, and the pitfalls/gaps Scout's synthesis flagged. Give the returned text directly to Claude Code/Cursor/etc. as the task prompt. Pass `thread` to fold a named ask_platform thread's conversation in as an LLM-summarized 'already figured out' section, so specifics discussed in chat aren't left behind.",
     {
       slug: z.string().describe("The run slug, see list_platforms"),
       lang: z.enum(["ts", "py"]).describe("Target language for the embedded starter script"),
       workflow: z.string().optional().describe("A commonWorkflows name to target (defaults to the first workflow)"),
+      thread: z.string().optional().describe("A thread title (see ask_platform) whose conversation should be summarized into the brief"),
     },
-    async ({ slug, lang, workflow }) => {
+    async ({ slug, lang, workflow, thread }) => {
       const opened = await LocalFileStore.open(slug);
       if (!opened) {
         return { isError: true, content: [{ type: "text", text: `No run found for "${slug}".` }] };
@@ -281,12 +287,30 @@ export function createScoutMcpServer(): McpServer {
       const endpoints = await store.getEndpoints();
       const platform = await store.getPlatform();
 
+      let threadSummary: string | undefined;
+      if (thread) {
+        const threads = await store.listChatThreads();
+        const found = threads.find((t) => t.title === thread);
+        if (!found) {
+          const available = threads.map((t) => t.title).join(", ") || "(none yet)";
+          return {
+            isError: true,
+            content: [{ type: "text", text: `No thread named "${thread}" for "${slug}". Available threads: ${available}` }],
+          };
+        }
+        const history = await store.getChatHistory(found.id);
+        if (history.length > 0) {
+          const llm = await resolveLLMProvider();
+          threadSummary = await summarizeThreadForHandoff(llm, history.map((m) => ({ role: m.role, content: m.content })));
+        }
+      }
+
       try {
         const result = await assembleHandoff(
           understanding,
           endpoints,
           { name: platform.name, slug: store.slug, baseUrl: platform.baseUrl, authScheme: parseAuthScheme(platform.authScheme) },
-          workflow === undefined ? { lang } : { lang, workflow },
+          { lang, ...(workflow === undefined ? {} : { workflow }), ...(threadSummary ? { threadSummary } : {}) },
         );
         return { content: [{ type: "text", text: result.markdown }] };
       } catch (error) {

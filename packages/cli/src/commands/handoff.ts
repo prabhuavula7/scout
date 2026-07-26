@@ -1,8 +1,15 @@
 import fs from "node:fs/promises";
 import { Command } from "commander";
-import { assembleHandoff, parseAuthScheme, UnknownWorkflowError, type GenerateLang } from "@scout/agents";
+import {
+  assembleHandoff,
+  parseAuthScheme,
+  summarizeThreadForHandoff,
+  UnknownWorkflowError,
+  type GenerateLang,
+} from "@scout/agents";
 import { LocalFileStore } from "@scout/store";
 import { copyToClipboard } from "../clipboard.js";
+import { resolveLLMProvider } from "../config.js";
 
 export function registerHandoffCommand(program: Command): void {
   program
@@ -13,7 +20,8 @@ export function registerHandoffCommand(program: Command): void {
     .option("--workflow <name>", "a commonWorkflows name to target (defaults to the first workflow)")
     .option("--out <path>", "write to a file instead of stdout; refuses to overwrite an existing file")
     .option("--copy", "copy the brief to your system clipboard instead of printing it")
-    .action(async (slug: string, options: { lang: string; workflow?: string; out?: string; copy?: boolean }) => {
+    .option("--thread <name>", "fold a named thread's conversation into the brief as an LLM-summarized 'already figured out' section")
+    .action(async (slug: string, options: { lang: string; workflow?: string; out?: string; copy?: boolean; thread?: string }) => {
       const opened = await LocalFileStore.open(slug);
       if (!opened) {
         console.error(`No run found for "${slug}". Run \`scout list\` to see what's available.`);
@@ -39,13 +47,37 @@ export function registerHandoffCommand(program: Command): void {
       const endpoints = await store.getEndpoints();
       const platform = await store.getPlatform();
 
+      let threadSummary: string | undefined;
+      if (options.thread) {
+        const threads = await store.listChatThreads();
+        const thread = threads.find((t) => t.title === options.thread);
+        if (!thread) {
+          const available = threads.map((t) => t.title).join(", ") || "(none yet)";
+          console.error(`No thread named "${options.thread}" for "${slug}". Available threads: ${available}`);
+          process.exitCode = 1;
+          return;
+        }
+        const history = await store.getChatHistory(thread.id);
+        if (history.length > 0) {
+          const llm = await resolveLLMProvider();
+          threadSummary = await summarizeThreadForHandoff(
+            llm,
+            history.map((m) => ({ role: m.role, content: m.content })),
+          );
+        }
+      }
+
       let result;
       try {
         result = await assembleHandoff(
           understanding,
           endpoints,
           { name: platform.name, slug: store.slug, baseUrl: platform.baseUrl, authScheme: parseAuthScheme(platform.authScheme) },
-          options.workflow === undefined ? { lang } : { lang, workflow: options.workflow },
+          {
+            lang,
+            ...(options.workflow === undefined ? {} : { workflow: options.workflow }),
+            ...(threadSummary ? { threadSummary } : {}),
+          },
         );
       } catch (error) {
         if (error instanceof UnknownWorkflowError) {

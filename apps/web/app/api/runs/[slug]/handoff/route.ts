@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { assembleHandoff, parseAuthScheme, UnknownWorkflowError, type GenerateLang } from "@scout/agents";
+import { assembleHandoff, parseAuthScheme, summarizeThreadForHandoff, UnknownWorkflowError, type GenerateLang } from "@scout/agents";
 import { LocalFileStore } from "@scout/store";
+import { resolveLLMProvider } from "@/lib/server-config";
 
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -10,7 +11,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   }
   const { store } = opened;
 
-  const body = (await request.json().catch(() => ({}))) as { lang?: string; workflow?: string };
+  const body = (await request.json().catch(() => ({}))) as { lang?: string; workflow?: string; threadId?: string };
   if (body.lang !== "ts" && body.lang !== "py") {
     return NextResponse.json({ error: 'lang must be "ts" or "py"' }, { status: 400 });
   }
@@ -23,12 +24,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   const endpoints = await store.getEndpoints();
   const platform = await store.getPlatform();
 
+  let threadSummary: string | undefined;
+  if (body.threadId) {
+    const history = await store.getChatHistory(body.threadId);
+    if (history.length > 0) {
+      const llm = await resolveLLMProvider();
+      threadSummary = await summarizeThreadForHandoff(llm, history.map((m) => ({ role: m.role, content: m.content })));
+    }
+  }
+
   try {
     const result = await assembleHandoff(
       understanding,
       endpoints,
       { name: platform.name, slug: store.slug, baseUrl: platform.baseUrl, authScheme: parseAuthScheme(platform.authScheme) },
-      body.workflow === undefined ? { lang } : { lang, workflow: body.workflow },
+      { lang, ...(body.workflow === undefined ? {} : { workflow: body.workflow }), ...(threadSummary ? { threadSummary } : {}) },
     );
     return NextResponse.json({ markdown: result.markdown, workflowUsed: result.workflowUsed });
   } catch (error) {

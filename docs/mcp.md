@@ -46,13 +46,13 @@ Running from source instead of a global install? Swap `"scout"` for `"node"` and
 | Tool | What it does |
 |---|---|
 | `understand_platform` | Import a spec (URL), crawl doc pages, and generate the full understanding. Returns the slug for every other tool. |
-| `ask_platform` | Ask a grounded question. Agentic: a real multi-turn tool-calling loop, not single-shot RAG. Can call `search_docs`, search the live web, generate starter code, or assemble a handoff brief mid-conversation. Every source is tagged `docs` (real similarity score), `web` (URL), or `model_knowledge` (unverified). |
+| `ask_platform` | Ask a grounded question, scoped to a thread (`thread`, default `main`) so separate conversations about the same platform don't bleed into each other's history, same threads the web app's Threads tab shows. Agentic: a real multi-turn tool-calling loop, not single-shot RAG. Can call `search_docs`, search the live web, generate starter code, or assemble a handoff brief mid-conversation. Every source is tagged `docs` (real similarity score), `web` (URL), or `model_knowledge` (unverified). |
 | `list_platforms` | List every run Scout has already analyzed, with slug and status. |
 | `list_connectors` | List known connector presets (see [connectors.md](connectors.md)). |
 | `refresh_platform` | Regenerate a run's understanding. Plain refresh re-synthesizes from what's already crawled; `recrawl: true` also re-fetches doc URLs first. |
 | `diff_platform` | Drift detection: what changed in a run's understanding since its last refresh. |
 | `generate_platform` | Generate a real, syntax-checked starter script (or an honest stub) from a run's blueprint. |
-| `handoff_platform` | Assemble a paste-ready integration brief: task, auth, starter code, `.env.example`, and pitfalls, for a coding agent to consume directly. |
+| `handoff_platform` | Assemble a paste-ready integration brief: task, auth, starter code, `.env.example`, and pitfalls, for a coding agent to consume directly. Pass `thread` to fold that thread's conversation in as an LLM-distilled "already figured out in chat" section, so specifics discussed with `ask_platform` aren't left behind. |
 | `export_platform` | Export the full understanding as Markdown or JSON. |
 | `research_platform` | Find related articles, tutorials, and real-world use cases via a configured web search provider. |
 | `remove_platform` | Delete a run and everything under it. Requires `confirm: true`, since it's irreversible. |
@@ -63,7 +63,7 @@ A developer working in Claude Code, with Scout already added as an MCP server:
 
 1. "Import the Stripe API and tell me how subscriptions work." → `understand_platform` runs the full pipeline, `ask_platform` answers with real citations from the crawled docs.
 2. "Give me a starter script for creating a subscription." → `generate_platform` returns real, syntax-checked TypeScript, or an honest stub if the workflow needs a write call Scout doesn't support yet.
-3. "Prep a handoff brief for the invoicing workflow." → `handoff_platform` returns one Markdown document: task, auth, code, pitfalls, ready for the agent to implement against directly.
+3. "Prep a handoff brief for the invoicing workflow, and fold in what we just discussed." → `handoff_platform` with `thread` set returns one Markdown document: task, auth, code, pitfalls, and an LLM-distilled summary of what step 1's conversation actually confirmed, ready for the agent to implement against directly.
 4. Three weeks later: "Has anything changed since we last looked at this?" → `diff_platform` reports exactly what's different, no re-reading required.
 
 None of this requires the developer to run a single `scout` command by hand. The agent drives the whole pipeline through MCP.

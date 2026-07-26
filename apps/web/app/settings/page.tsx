@@ -16,6 +16,7 @@ import {
   useUpsertLLMProvider,
   useUpsertSearchProvider,
 } from "@/lib/use-config";
+import { useSidebarCollapsed } from "@/components/sidebar-context";
 
 const LLM_KIND_LABELS: Record<LLMProviderKind, string> = {
   openai: "OpenAI",
@@ -37,9 +38,10 @@ const cardClass = "rounded-xl border border-stone-200 p-5 dark:border-stone-800"
 
 export default function SettingsPage() {
   const { data: config, isLoading } = useScoutConfig();
+  const collapsed = useSidebarCollapsed();
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
+    <main className={`mx-auto px-6 py-10 transition-[max-width] duration-200 ${collapsed ? "max-w-4xl" : "max-w-3xl"}`}>
       <div>
         <h1 className="font-serif text-2xl font-medium tracking-tight">Settings</h1>
         <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">

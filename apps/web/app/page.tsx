@@ -6,10 +6,12 @@ import { Plus, Terminal, Trash2 } from "lucide-react";
 import { EmptyState, StatusBadge } from "@scout/ui";
 import { useRemoveRun, useRuns } from "@/lib/use-runs";
 import { GettingStartedBanner } from "@/components/getting-started-banner";
+import { useSidebarCollapsed } from "@/components/sidebar-context";
 
 export default function HomePage() {
   const { data: runs, isLoading } = useRuns();
   const removeRun = useRemoveRun();
+  const collapsed = useSidebarCollapsed();
 
   function handleDelete(e: React.MouseEvent, slug: string, name: string) {
     e.preventDefault();
@@ -20,7 +22,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
+    <main className={`mx-auto px-6 py-10 transition-[max-width] duration-200 ${collapsed ? "max-w-5xl" : "max-w-4xl"}`}>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-serif text-2xl font-medium tracking-tight">Runs</h1>
