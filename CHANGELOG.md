@@ -4,6 +4,13 @@ All notable changes to Scout are documented here. Format loosely follows [Keep a
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-07-26
+
+### Fixed
+
+- **`scout serve` was completely broken in the published 2.2.0 package**: `packages/cli/tsup.config.ts`'s build hook copies whatever `apps/web/.next` happens to already be on disk into the published bundle, on the assumption a real `next build` already ran; 2.2.0 was published by running only `pnpm --filter @dotapk7/scoutcli build` (which never touches `apps/web`), so it silently copied a stale dev-mode `.next` directory (no production `BUILD_ID`/manifests) instead, and `next start` failed outright with "Could not find a production build." Caught via a real end-to-end install-and-run in an isolated environment (fresh `HOME`, fresh npm prefix, no monorepo on disk) rather than a version-string check, immediately after publishing. The only correct build command is the root-level `pnpm build` (turbo builds `apps/web` via a real `next build` first, then `packages/cli`'s `tsup`, in dependency order); documented here so it doesn't regress the same way twice.
+- Two real `next build`/`next lint` failures surfaced by actually running the root-level build for the first time this release (previous releases were published from a stale, already-built `.next`, which masked this): two `// eslint-disable-next-line react-hooks/exhaustive-deps` comments in the new Threads page referenced a rule this project's ESLint config doesn't register (Next's `eslint-config-next` isn't wired into the shared `@scout/eslint-config`), which `next build`'s lint step treats as a hard error, not a warning; and an unused `init` parameter in a pre-existing test file. Both fixed; `pnpm build`/`pnpm lint`/`pnpm test` all pass cleanly end to end now.
+
 ## [2.2.0] - 2026-07-26
 
 ### Added

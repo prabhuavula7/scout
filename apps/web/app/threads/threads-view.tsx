@@ -115,13 +115,11 @@ export function ThreadsView() {
   // landing on /threads with no query params isn't just a blank picker.
   useEffect(() => {
     if (!selectedRun && runs && runs.length > 0) selectRun(runs[0]!.slug);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRun, runs]);
 
   // Default to that run's most recently updated thread once threads load.
   useEffect(() => {
     if (selectedRun && !selectedThread && threads && threads.length > 0) selectThread(threads[0]!.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRun, selectedThread, threads]);
 
   async function handleNewThread() {

@@ -96,7 +96,7 @@ describe("UnderstandingPage", () => {
   });
 
   it("generates starter code when clicked, and shows the honest-stub warning when the run can't support a real script", async () => {
-    const fetchMock = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
       if (typeof url === "string" && url.includes("/generate")) {
         return {
           ok: true,
