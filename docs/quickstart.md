@@ -48,7 +48,7 @@ Opens the web app at `http://127.0.0.1:4207` (127.0.0.1 only by default, no logi
 
 ![The Runs list: every platform you've pointed Scout at, stored locally, with the collapsible sidebar and Threads tab](../public/runs-list.png)
 
-Open **Threads** and start asking questions. Every platform gets its own thread list, Claude/ChatGPT-style: start a new named thread per question you're working through, switch back to an old one, delete it when you're done. It's a real multi-turn tool-calling loop, not a single prompt: it searches the crawled docs (and the live web, if you've configured a search provider), cites what it finds, and tells you plainly when something isn't in the docs instead of guessing.
+Open **Threads** and start asking questions. It's a flat thread list, Claude/ChatGPT-style, across every platform you've imported: start a new named thread, switch back to an old one, delete it when you're done, filter to one platform when you want to. Pick two or more platforms when creating a thread and the conversation is grounded in all of them at once, with citations tagged by which platform they came from. It's a real multi-turn tool-calling loop, not a single prompt: it searches the crawled docs (and the live web, if you've configured a search provider), cites what it finds, and tells you plainly when something isn't in the docs instead of guessing.
 
 ![The full understanding: summary, architecture, auth flow, and a table of contents](../public/understanding-summary.png)
 

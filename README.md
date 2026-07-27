@@ -43,13 +43,15 @@ That gap, between what a coding agent assumes and what a platform's docs actuall
 
 ## Threads: a real chat, not a single Q&A box
 
-Chat isn't one conversation per run. Every platform gets its own thread list, Claude/ChatGPT-style: start a new thread per question you're working through, rename it, delete it, switch back to an old one without losing context. The sidebar collapses to icon-only when you want the room, and the panes between Runs, Threads, and the conversation are draggable.
+Chat isn't one conversation per run. The Threads tab is a flat, Claude/ChatGPT-style thread list across every platform you've imported, not grouped by run first: start a new thread, rename it, delete it, switch back to an old one without losing context, filter down to one platform when you want to. Each thread shows a badge for every platform it's grounded in. The sidebar collapses to icon-only when you want the room, and the pane between the thread list and the conversation is draggable.
+
+A thread isn't locked to one platform either, on any surface. Pick two or more when you create one in the web app, pass a comma-separated slug list to `scout chat`, or pass `slugs` (plus a `title` to name the conversation) to `ask_platform`, and the conversation is grounded in all of them at once: search_docs merges and re-ranks results across every platform's crawled docs, and every citation is tagged with which platform it actually came from, so "how would Stripe and HubSpot talk to each other" gets a real, cited answer instead of two separate single-platform conversations you have to reconcile yourself.
 
 It's a real multi-turn tool-calling loop underneath, not a wrapper around a single prompt: it can search the platform's own crawled docs, search the live web if you've configured a provider, generate starter code, or assemble an IDE handoff brief, mid-conversation. Every answer is tagged with where it actually came from: a doc excerpt with a real similarity score, a live web result with a URL, or the model's own general knowledge, flagged unverified rather than given a fake citation.
 
-![Scout's Threads tab: multiple named conversations per platform, real citations, dark mode](public/threads-dark.png)
+![Scout's flattened Threads tab: a real thread spanning Stripe and HubSpot, with platform badges on the thread and on each citation, dark mode](public/threads-dark.png)
 
-![A Threads conversation in light mode, with real generated code inline and citations from the crawled docs](public/threads-light.png)
+![The same multi-platform thread in light mode, a real answer citing both platforms' crawled docs](public/threads-light.png)
 
 ## A handoff that carries the whole conversation
 
@@ -62,6 +64,10 @@ It's a real multi-turn tool-calling loop underneath, not a wrapper around a sing
 ![The IDE handoff section folding a real chat thread's findings into the brief before assembling it](public/ide-handoff.png)
 
 Full reference, including the exact auth schemes supported today: [docs/generated-code.md](docs/generated-code.md).
+
+## Bring your own docs
+
+Crawled `--docs` URLs aren't the only way to ground chat and handoffs. Attach a local file (PDF, docx/xlsx/pptx, odt/odp/ods, rtf, csv, md, html, txt, json, yaml, up to 10 MB) or a link directly from the Understanding page, `scout docs add <slug> <file-or-url>`, or the `attach_document_platform` MCP tool -- a runbook, a contract, an internal spec, an article -- and it's chunked, embedded, and cited exactly like a crawled doc page. Google Drive share links are refused with a clear reason (they resolve to a viewer page, not the file) rather than silently ingesting the wrong thing.
 
 ## Every endpoint, at a glance
 
@@ -101,7 +107,7 @@ args = ["mcp"]
 { "mcpServers": { "scout": { "command": "scout", "args": ["mcp"] } } }
 ```
 
-Eleven tools, the same capabilities as the CLI and web app: import a spec, ask a grounded question in a named thread, refresh a stale run, check what changed, generate a starter script, assemble an IDE handoff brief (with or without a thread folded in), export the blueprint, find further reading, clean up. A developer working in Claude Code can say "integrate Stripe invoicing" and the agent pulls real, cited platform knowledge into its own context instead of hallucinating an API shape. Full reference: [docs/mcp.md](docs/mcp.md).
+Twelve tools, the same capabilities as the CLI and web app: import a spec, ask a grounded question in a named thread, refresh a stale run, check what changed, generate a starter script, assemble an IDE handoff brief (with or without a thread folded in), attach a local file or link to a run's doc corpus, export the blueprint, find further reading, clean up. A developer working in Claude Code can say "integrate Stripe invoicing" and the agent pulls real, cited platform knowledge into its own context instead of hallucinating an API shape. Full reference: [docs/mcp.md](docs/mcp.md).
 
 ## Real examples
 
@@ -121,13 +127,14 @@ More platforms, full transcripts, and a walkthrough of the honesty behavior: [do
 |---|---|
 | `scout serve` | The local web app: Runs, New, Threads, API Explorer, Settings. |
 | `scout understand <spec-url-or-path>` | Import a spec, crawl `--docs`, generate the understanding. |
-| `scout chat <slug> [--thread <name>]` | Agentic terminal chat: real tool-calling, cited answers, real threads. |
+| `scout chat <slug\|slug1,slug2,...> [--thread <name>]` | Agentic terminal chat: real tool-calling, cited answers, real threads. Comma-separated slugs chat across several platforms at once. |
 | `scout generate <slug> --lang ts\|py` | A real, syntax-checked starter script, or an honest stub. |
 | `scout handoff <slug> --lang ts\|py [--thread <name>] [--copy]` | A paste-ready integration brief, optionally folding a thread's findings in. |
 | `scout diff <slug>` | Drift detection: what changed in a run's understanding since its last refresh. |
 | `scout refresh <slug> [--recrawl]` | Regenerate the understanding without a full re-import. |
 | `scout watch <slug>` | Poll a run's docs and refresh automatically when they change. |
 | `scout export <slug> --format md\|json` | Export the blueprint. |
+| `scout docs add <slug> <file-or-url>` | Attach a local file or a link to a run's grounded doc corpus, beyond its crawled docs. |
 | `scout mcp` | Run Scout as an MCP server for coding agents. |
 
 Full option list on any command: `scout <command> --help`. Everything else, providers, connectors, Docker, architecture, contributing: [docs/](docs/).

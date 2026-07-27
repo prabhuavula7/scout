@@ -2,11 +2,14 @@ import { Command } from "commander";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { assembleHandoff, diffUnderstanding, generateCode, parseAuthScheme, runAgenticChatAgent, runCoordinator, runRefresh, runResearchAgent, summarizeThreadForHandoff, UnknownWorkflowError } from "@scout/agents";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { assembleHandoff, diffUnderstanding, generateCode, parseAuthScheme, runAgenticChatAgent, runCoordinator, runRefresh, runResearchAgent, runUploadFileAgent, runUploadLinkAgent, summarizeThreadForHandoff, UnknownWorkflowError, type ChatPlatform } from "@scout/agents";
 import { getConnector, loadConnectorRegistry } from "@scout/connectors";
-import { DEFAULT_THREAD_ID, LocalFileStore } from "@scout/store";
+import { DEFAULT_THREAD_ID, LocalFileStore, MultiRunThreadStore } from "@scout/store";
 import type { ImportRequest } from "@scout/types";
 import { resolveLLMProvider, resolveSearchProvider } from "../config.js";
+import { resolveMultiThread } from "../resolve-multi-thread.js";
 import { resolveSourceKind } from "../source-kind.js";
 import { toMarkdown } from "./export.js";
 
@@ -81,33 +84,83 @@ export function createScoutMcpServer(): McpServer {
 
   server.tool(
     "ask_platform",
-    "Ask a grounded question about a platform Scout has already analyzed (see list_platforms for available slugs). Backed by a real multi-turn tool-calling loop: can search the platform's own docs, search the live web (if configured), generate a starter script, or assemble an IDE handoff brief mid-conversation. Every returned source is tagged with where it actually came from: \"docs\" (real similarity score), \"web\" (URL), or \"model_knowledge\" (the model's own general knowledge, unverified against this platform's docs). Conversations are scoped to a thread (default \"main\"); pass a different `thread` id to keep separate conversations about the same platform from bleeding into each other's history.",
+    "Ask a grounded question about a platform Scout has already analyzed (see list_platforms for available slugs). Backed by a real multi-turn tool-calling loop: can search the platform's own docs, search the live web (if configured), generate a starter script, or assemble an IDE handoff brief mid-conversation. Every returned source is tagged with where it actually came from: \"docs\" (real similarity score), \"web\" (URL), or \"model_knowledge\" (the model's own general knowledge, unverified against this platform's docs). Conversations are scoped to a thread (default \"main\"); pass a different `thread` id to keep separate conversations about the same platform from bleeding into each other's history. To ask across more than one platform at once (e.g. \"how would Stripe and HubSpot talk to each other\"), pass `slugs` (2+) instead of `slug`, and `title` to name that conversation -- search_docs then merges and tags results across every platform in scope, and reusing the same slugs + title continues that same thread on a later call.",
     {
-      slug: z.string().describe("The run slug from understand_platform or list_platforms"),
+      slug: z.string().optional().describe("The run slug from understand_platform or list_platforms, for a single-platform conversation. Exactly one of slug/slugs is required."),
+      slugs: z.array(z.string()).min(2).optional().describe("2+ run slugs for a conversation spanning multiple platforms at once. Exactly one of slug/slugs is required."),
       question: z.string(),
       thread: z
         .string()
         .optional()
-        .describe('Thread ID to scope this conversation to. Omit for the default "main" thread.'),
+        .describe('Thread ID to scope a single-platform (slug) conversation to. Omit for the default "main" thread. Not used with slugs -- use title instead.'),
+      title: z
+        .string()
+        .optional()
+        .describe('Required when using slugs: names the multi-platform conversation. There\'s no default like "main" for an arbitrary set of platforms; reusing the same slugs + title continues that same thread.'),
     },
-    async ({ slug, question, thread }) => {
-      const opened = await LocalFileStore.open(slug);
-      if (!opened) {
-        return { isError: true, content: [{ type: "text", text: `No run found for "${slug}".` }] };
+    async ({ slug, slugs, question, thread, title }) => {
+      if (!slug === !slugs) {
+        return { isError: true, content: [{ type: "text", text: "Pass exactly one of slug or slugs, not both or neither." }] };
       }
-      const { store, platformId } = opened;
-      const threadId = thread ?? DEFAULT_THREAD_ID;
-
-      const priorMessages = await store.getChatHistory(threadId);
-      const history = priorMessages.map((m) => ({ role: m.role, content: m.content }));
-
-      await store.appendChatMessage(threadId, "user", question, []);
       const llm = await resolveLLMProvider();
       const searchProvider = await resolveSearchProvider();
-      const result = await runAgenticChatAgent(store, llm, searchProvider, platformId, question, history);
-      await store.appendChatMessage(threadId, "assistant", result.answer, result.sources);
 
-      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      if (slug) {
+        const opened = await LocalFileStore.open(slug);
+        if (!opened) {
+          return { isError: true, content: [{ type: "text", text: `No run found for "${slug}".` }] };
+        }
+        const { store, platformId } = opened;
+        const threadId = thread ?? DEFAULT_THREAD_ID;
+
+        const priorMessages = await store.getChatHistory(threadId);
+        const history = priorMessages.map((m) => ({ role: m.role, content: m.content }));
+
+        await store.appendChatMessage(threadId, "user", question, []);
+        const platformName = (await store.getPlatform()).name;
+        const result = await runAgenticChatAgent(
+          [{ platformId, slug: store.slug, name: platformName, store }],
+          llm,
+          searchProvider,
+          question,
+          history,
+        );
+        await store.appendChatMessage(threadId, "assistant", result.answer, result.sources);
+
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      }
+
+      if (!title) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Chatting across multiple platforms (${slugs!.join(", ")}) needs "title" to name the conversation; there's no default like "main" for an arbitrary set of platforms.`,
+            },
+          ],
+        };
+      }
+
+      const platforms: ChatPlatform[] = [];
+      for (const s of slugs!) {
+        const opened = await LocalFileStore.open(s);
+        if (!opened) {
+          return { isError: true, content: [{ type: "text", text: `No run found for "${s}".` }] };
+        }
+        const platformName = (await opened.store.getPlatform()).name;
+        platforms.push({ platformId: opened.platformId, slug: s, name: platformName, store: opened.store });
+      }
+
+      const multiThread = await resolveMultiThread(slugs!, title);
+      const priorMessages = await MultiRunThreadStore.getHistory(multiThread.id);
+      const history = priorMessages.map((m) => ({ role: m.role, content: m.content }));
+
+      await MultiRunThreadStore.appendMessage(multiThread.id, "user", question, []);
+      const result = await runAgenticChatAgent(platforms, llm, searchProvider, question, history);
+      await MultiRunThreadStore.appendMessage(multiThread.id, "assistant", result.answer, result.sources);
+
+      return { content: [{ type: "text", text: JSON.stringify({ ...result, threadId: multiThread.id }, null, 2) }] };
     },
   );
 
@@ -380,6 +433,39 @@ export function createScoutMcpServer(): McpServer {
       const resources = await runResearchAgent(searchProvider, platform.name);
       await store.saveResources(resources);
       return { content: [{ type: "text", text: JSON.stringify(resources, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "attach_document_platform",
+    "Attach a document to a run's grounded doc corpus, beyond its crawled --docs URLs: a local file (path readable from where `scout mcp` runs -- PDF, docx/xlsx/pptx, odt/odp/ods, rtf, csv, md, html, txt, json, yaml, up to 10 MB) or an http(s) link (fetched once, not recursively crawled). Retrieved and cited exactly like a crawled doc page. Pass exactly one of filePath or url.",
+    {
+      slug: z.string().describe("The run slug, see list_platforms"),
+      filePath: z.string().optional().describe("Local file path to attach"),
+      url: z.string().url().optional().describe("http(s) link to fetch and attach"),
+    },
+    async ({ slug, filePath, url }) => {
+      if (!filePath === !url) {
+        return { isError: true, content: [{ type: "text", text: "Pass exactly one of filePath or url, not both or neither." }] };
+      }
+      const opened = await LocalFileStore.open(slug);
+      if (!opened) {
+        return { isError: true, content: [{ type: "text", text: `No run found for "${slug}".` }] };
+      }
+      const { store, platformId } = opened;
+      const llm = await resolveLLMProvider();
+
+      try {
+        const result = url
+          ? await runUploadLinkAgent(store, llm, platformId, { url })
+          : await runUploadFileAgent(store, llm, platformId, {
+              filename: path.basename(filePath!),
+              buffer: await fs.readFile(filePath!),
+            });
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      } catch (error) {
+        return { isError: true, content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }] };
+      }
     },
   );
 

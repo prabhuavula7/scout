@@ -4,6 +4,22 @@ All notable changes to Scout are documented here. Format loosely follows [Keep a
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-07-27
+
+### Added
+
+- **Multi-run chat**: a thread can now span more than one platform, on all three surfaces (web, CLI, MCP). `packages/store` gained `MultiRunThreadStore`, giving a multi-run thread its own home under `~/.scout/threads/<threadId>/` (a single-run thread is untouched, still inside that run's own `LocalFileStore`). `runAgenticChatAgent` now takes a `ChatPlatform[]` instead of a single store/platformId; `search_docs` merges and re-ranks results across every platform in scope and tags each citation with which one it came from; `generate_starter_code`/`assemble_handoff` require an explicit `platform` slug once more than one platform is in scope, erroring with the valid slugs rather than silently guessing which run "the API" means. The Threads page flattened from "Runs → Threads → Chat" (three columns, grouped by run) to a single flat thread list with per-thread platform badges, a platform filter, and a "new thread" picker for choosing one or several platforms at once, since a multi-run thread doesn't belong under any one run's column. New API routes: `/api/multi-threads`, `/api/multi-threads/[threadId]`, `/api/multi-threads/[threadId]/messages`, `/api/threads` (the aggregated flat list). `scout chat` takes a comma-separated slug list (`scout chat stripe,hubspot --thread "sync"`, `--thread` required since there's no "Main"-style default for an arbitrary platform set); `ask_platform` gained `slugs`/`title` alongside its existing singular `slug`/`thread`. Both share `resolveMultiThread` (title + exact platform-set match reuses a thread, otherwise creates one). Verified live end to end on all three surfaces against a real Stripe + HubSpot thread: real OpenAI calls (browser, `scout chat`, and a real MCP stdio session against the built binary) all correctly merged and cited excerpts from both platforms' crawled docs, and reusing the same slugs + title (in either order) continued the same thread rather than creating a new one each time.
+
+### Fixed
+
+- **`/threads` was being statically prerendered by Next**, baking whatever local state existed on the build machine into the page's initial server-rendered HTML. Harmless while every render used constant text, but became a real, visible bug the moment thread selection needed to render different copy (multi- vs single-run) -- fixed with `export const dynamic = "force-dynamic"`, since the page's real content depends entirely on live local state fetched client-side, not anything Next can usefully prerender at build time.
+
+## [2.3.0] - 2026-07-26
+
+### Added
+
+- **User-uploaded documents and attached links**: chat and handoffs can now be grounded in more than a platform's crawled `--docs` URLs. `scout docs add <slug> <file-or-url>` (a new `attach_document_platform` MCP tool, and an "Attach a document" control on the web app's Understanding page) ingests a local file or an http(s) link through the exact same chunk/embed pipeline the documentation crawler uses, so a runbook, contract, internal spec, or article a developer attaches is retrieved and cited identically to a crawled doc page, just tagged `origin: "upload"`/`"link"` instead of `"crawl"`. Supports PDF, docx/xlsx/pptx, odt/odp/ods, rtf, csv, md, html, txt, json, and yaml (via `officeparser`), up to 10 MB per item; zip archives are out of scope for v1. Google Drive share links are refused with a clear explanation (a share link's HTML is a viewer app shell, not the file's actual content) rather than silently ingesting navigation chrome as "documentation." `scout docs list`/`scout docs rm` (and matching `listDocSources`/`deleteDocChunksBySource` store methods) let a developer see and remove what they've attached. The chat UI only renders a citation as a clickable link when its source is a real http(s) URL, so an uploaded file's synthetic `scout-upload://` reference shows as a plain (non-broken) badge instead of a dead link.
+
 ## [2.2.1] - 2026-07-26
 
 ### Fixed

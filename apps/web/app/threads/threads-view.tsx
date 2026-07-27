@@ -3,26 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MessagesSquare, Pencil, Plus, Trash2 } from "lucide-react";
-import { EmptyState, StatusBadge } from "@scout/ui";
+import { EmptyState } from "@scout/ui";
 import { ChatPane } from "@/components/chat-pane";
 import { useSidebarCollapsed } from "@/components/sidebar-context";
 import {
-  useChatThreads,
-  useCreateChatThread,
-  useDeleteChatThread,
-  useRenameChatThread,
+  useCreateMultiThread,
+  useCreateThreadForRun,
+  useDeleteThread,
+  useRenameThread,
   useRuns,
+  useUnifiedThreads,
+  type ThreadTarget,
+  type UnifiedThreadSummary,
 } from "@/lib/use-runs";
 
-const RUNS_WIDTH_KEY = "scout-runs-column-width";
-const DEFAULT_RUNS_WIDTH = 144;
-const MIN_RUNS_WIDTH = 100;
-const MAX_RUNS_WIDTH = 320;
-
 const THREADS_WIDTH_KEY = "scout-threads-column-width";
-const DEFAULT_THREADS_WIDTH = 192;
-const MIN_THREADS_WIDTH = 160;
-const MAX_THREADS_WIDTH = 360;
+const DEFAULT_THREADS_WIDTH = 240;
+const MIN_THREADS_WIDTH = 180;
+const MAX_THREADS_WIDTH = 420;
 
 /** A column width that's draggable via a handle, persisted to localStorage
  * under `storageKey` so a user's preferred layout survives a reload. */
@@ -73,78 +71,122 @@ function relativeTime(iso: string): string {
   return `${Math.round(hours / 24)}d ago`;
 }
 
+function targetOf(summary: UnifiedThreadSummary): ThreadTarget {
+  return summary.kind === "single"
+    ? { kind: "single", slug: summary.platformSlugs[0]!, threadId: summary.id }
+    : { kind: "multi", threadId: summary.id };
+}
+
+/** Inline "new thread" picker: check one run for a single-run thread, or
+ * two-plus for a thread that spans them all. Kept as a small popover rather
+ * than a separate page since the only real decision is "which platform(s)". */
+function NewThreadPanel({ onClose, onCreated }: { onClose: () => void; onCreated: (target: ThreadTarget) => void }) {
+  const { data: runs } = useRuns();
+  const [checked, setChecked] = useState<string[]>([]);
+  const createSingle = useCreateThreadForRun();
+  const createMulti = useCreateMultiThread();
+
+  async function handleCreate() {
+    if (checked.length === 0) return;
+    if (checked.length === 1) {
+      const thread = await createSingle.mutateAsync({ slug: checked[0]! });
+      onCreated({ kind: "single", slug: checked[0]!, threadId: thread.id });
+    } else {
+      const thread = await createMulti.mutateAsync({ platformSlugs: checked });
+      onCreated({ kind: "multi", threadId: thread.id });
+    }
+    onClose();
+  }
+
+  function toggle(slug: string) {
+    setChecked((current) => (current.includes(slug) ? current.filter((s) => s !== slug) : [...current, slug]));
+  }
+
+  return (
+    <div className="absolute inset-x-0 top-full z-10 mt-1 rounded-lg border border-stone-200 bg-white p-2 shadow-lg dark:border-stone-800 dark:bg-stone-950">
+      <p className="px-1 pb-1.5 text-xs text-stone-500">
+        Pick one platform for a single-run thread, or several for a thread that spans them all.
+      </p>
+      <div className="max-h-48 space-y-0.5 overflow-y-auto">
+        {runs?.map((run) => (
+          <label
+            key={run.slug}
+            className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-stone-50 dark:hover:bg-stone-900"
+          >
+            <input type="checkbox" checked={checked.includes(run.slug)} onChange={() => toggle(run.slug)} />
+            <span className="truncate">{run.name}</span>
+          </label>
+        ))}
+      </div>
+      <div className="mt-2 flex justify-end gap-2">
+        <button type="button" onClick={onClose} className="rounded px-2 py-1 text-xs text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-900">
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleCreate}
+          disabled={checked.length === 0}
+          className="rounded bg-accent-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-600 disabled:opacity-40"
+        >
+          {checked.length > 1 ? `Create (${checked.length} platforms)` : "Create"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ThreadsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: runs, isLoading: runsLoading } = useRuns();
   const sidebarCollapsed = useSidebarCollapsed();
-  const { width: runsWidth, handleDragStart: handleRunsDragStart } = useResizableWidth(
-    RUNS_WIDTH_KEY,
-    DEFAULT_RUNS_WIDTH,
-    MIN_RUNS_WIDTH,
-    MAX_RUNS_WIDTH,
-  );
-  const { width: threadsWidth, handleDragStart: handleThreadsDragStart } = useResizableWidth(
+  const { data: threads } = useUnifiedThreads();
+  const { data: runs } = useRuns();
+  const renameThread = useRenameThread();
+  const deleteThread = useDeleteThread();
+  const [platformFilter, setPlatformFilter] = useState("");
+  const [showNewThreadPanel, setShowNewThreadPanel] = useState(false);
+  const { width: threadsWidth, handleDragStart } = useResizableWidth(
     THREADS_WIDTH_KEY,
     DEFAULT_THREADS_WIDTH,
     MIN_THREADS_WIDTH,
     MAX_THREADS_WIDTH,
   );
 
-  const selectedRun = searchParams.get("run") ?? "";
-  const selectedThread = searchParams.get("thread") ?? "";
-
-  const { data: threads } = useChatThreads(selectedRun);
-  const createThread = useCreateChatThread(selectedRun);
-  const renameThread = useRenameChatThread(selectedRun);
-  const deleteThread = useDeleteChatThread(selectedRun);
-
-  function selectRun(slug: string) {
-    router.push(`/threads?run=${encodeURIComponent(slug)}` as Parameters<typeof router.push>[0]);
-  }
+  const selectedThreadId = searchParams.get("thread") ?? "";
 
   function selectThread(threadId: string) {
-    router.push(
-      `/threads?run=${encodeURIComponent(selectedRun)}&thread=${encodeURIComponent(threadId)}` as Parameters<
-        typeof router.push
-      >[0],
-    );
+    router.push(`/threads?thread=${encodeURIComponent(threadId)}` as Parameters<typeof router.push>[0]);
   }
 
-  // Default to the first (most recently active) run once the list loads, so
+  // Default to the most recently updated thread once the list loads, so
   // landing on /threads with no query params isn't just a blank picker.
   useEffect(() => {
-    if (!selectedRun && runs && runs.length > 0) selectRun(runs[0]!.slug);
-  }, [selectedRun, runs]);
+    if (!selectedThreadId && threads && threads.length > 0) selectThread(threads[0]!.id);
+  }, [selectedThreadId, threads]);
 
-  // Default to that run's most recently updated thread once threads load.
-  useEffect(() => {
-    if (selectedRun && !selectedThread && threads && threads.length > 0) selectThread(threads[0]!.id);
-  }, [selectedRun, selectedThread, threads]);
+  const filteredThreads = (threads ?? []).filter(
+    (t) => !platformFilter || t.platformSlugs.includes(platformFilter),
+  );
+  const selectedSummary = threads?.find((t) => t.id === selectedThreadId);
 
-  async function handleNewThread() {
-    const thread = await createThread.mutateAsync(undefined);
-    selectThread(thread.id);
-  }
-
-  function handleRename(e: React.MouseEvent, threadId: string, currentTitle: string) {
+  function handleRename(e: React.MouseEvent, summary: UnifiedThreadSummary) {
     e.preventDefault();
     e.stopPropagation();
-    const title = window.prompt("Rename thread", currentTitle);
-    if (title && title.trim() && title.trim() !== currentTitle) {
-      renameThread.mutate({ threadId, title: title.trim() });
+    const title = window.prompt("Rename thread", summary.title);
+    if (title && title.trim() && title.trim() !== summary.title) {
+      renameThread.mutate({ target: targetOf(summary), title: title.trim() });
     }
   }
 
-  function handleDelete(e: React.MouseEvent, threadId: string, title: string) {
+  function handleDelete(e: React.MouseEvent, summary: UnifiedThreadSummary) {
     e.preventDefault();
     e.stopPropagation();
-    if (!window.confirm(`Delete thread "${title}"? This can't be undone.`)) return;
-    deleteThread.mutate(threadId);
-    if (threadId === selectedThread) {
-      const remaining = (threads ?? []).filter((t) => t.id !== threadId);
+    if (!window.confirm(`Delete thread "${summary.title}"? This can't be undone.`)) return;
+    deleteThread.mutate(targetOf(summary));
+    if (summary.id === selectedThreadId) {
+      const remaining = filteredThreads.filter((t) => t.id !== summary.id);
       if (remaining.length > 0) selectThread(remaining[0]!.id);
-      else router.push(`/threads?run=${encodeURIComponent(selectedRun)}` as Parameters<typeof router.push>[0]);
+      else router.push("/threads" as Parameters<typeof router.push>[0]);
     }
   }
 
@@ -154,79 +196,71 @@ export function ThreadsView() {
         sidebarCollapsed ? "max-w-7xl" : "max-w-6xl"
       }`}
     >
-      <aside style={{ width: runsWidth }} className="shrink-0 overflow-y-auto scrollbar-thin">
-        <h2 className="px-1 text-xs font-medium uppercase tracking-wide text-stone-400">Runs</h2>
-        <div className="mt-2 space-y-0.5">
-          {runsLoading && <p className="px-1 text-sm text-stone-500">Loading…</p>}
-          {runs?.map((run) => (
-            <button
-              key={run.slug}
-              type="button"
-              onClick={() => selectRun(run.slug)}
-              title={run.name}
-              className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition ${
-                run.slug === selectedRun
-                  ? "bg-stone-100 font-medium text-stone-900 dark:bg-stone-800 dark:text-stone-50"
-                  : "text-stone-500 hover:bg-stone-50 hover:text-stone-900 dark:hover:bg-stone-900 dark:hover:text-stone-100"
-              }`}
-            >
-              <span className="truncate">{run.name}</span>
-              <StatusBadge status={run.status} />
-            </button>
-          ))}
-        </div>
-      </aside>
-
-      <div
-        onMouseDown={handleRunsDragStart}
-        role="separator"
-        aria-orientation="vertical"
-        title="Drag to resize"
-        className="w-1 shrink-0 cursor-col-resize rounded-full bg-stone-200 transition hover:bg-accent-500/60 active:bg-accent-500 dark:bg-stone-800"
-      />
-
-      <aside
-        style={{ width: threadsWidth }}
-        className="shrink-0 overflow-y-auto pl-4 scrollbar-thin"
-      >
+      <aside style={{ width: threadsWidth }} className="relative shrink-0 overflow-y-auto scrollbar-thin">
         <div className="flex items-center justify-between px-1">
           <h2 className="text-xs font-medium uppercase tracking-wide text-stone-400">Threads</h2>
           <button
             type="button"
-            onClick={handleNewThread}
-            disabled={!selectedRun || createThread.isPending}
+            onClick={() => setShowNewThreadPanel((v) => !v)}
             aria-label="New thread"
-            className="rounded-lg p-1 text-stone-400 transition hover:bg-stone-100 hover:text-stone-900 disabled:opacity-40 dark:hover:bg-stone-800 dark:hover:text-stone-100"
+            className="rounded-lg p-1 text-stone-400 transition hover:bg-stone-100 hover:text-stone-900 dark:hover:bg-stone-800 dark:hover:text-stone-100"
           >
             <Plus className="h-3.5 w-3.5" strokeWidth={2} />
           </button>
         </div>
+        {showNewThreadPanel && (
+          <NewThreadPanel onClose={() => setShowNewThreadPanel(false)} onCreated={(target) => selectThread(target.threadId)} />
+        )}
+
+        <select
+          value={platformFilter}
+          onChange={(e) => setPlatformFilter(e.target.value)}
+          className="mt-2 w-full rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs text-stone-700 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300"
+        >
+          <option value="">All platforms</option>
+          {runs?.map((run) => (
+            <option key={run.slug} value={run.slug}>
+              {run.name}
+            </option>
+          ))}
+        </select>
+
         <div className="mt-2 space-y-0.5">
-          {(threads ?? []).length === 0 && (
-            <p className="px-1 text-xs text-stone-500">No threads yet. Start one, or just ask a question below.</p>
+          {filteredThreads.length === 0 && (
+            <p className="px-1 py-2 text-xs text-stone-500">No threads yet. Start one with the + above.</p>
           )}
-          {threads?.map((thread) => (
+          {filteredThreads.map((summary) => (
             <div
-              key={thread.id}
-              onClick={() => selectThread(thread.id)}
+              key={summary.id}
+              onClick={() => selectThread(summary.id)}
               role="button"
               tabIndex={0}
               className={`group flex items-center justify-between gap-1 rounded-lg px-2.5 py-1.5 text-sm transition ${
-                thread.id === selectedThread
+                summary.id === selectedThreadId
                   ? "bg-stone-100 font-medium text-stone-900 dark:bg-stone-800 dark:text-stone-50"
                   : "text-stone-500 hover:bg-stone-50 hover:text-stone-900 dark:hover:bg-stone-900 dark:hover:text-stone-100"
               }`}
             >
               <div className="min-w-0">
-                <p className="truncate" title={thread.title}>
-                  {thread.title}
+                <p className="truncate" title={summary.title}>
+                  {summary.title}
                 </p>
-                <p className="text-xs text-stone-400">{relativeTime(thread.updatedAt)}</p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                  {summary.platformNames.map((name) => (
+                    <span
+                      key={name}
+                      className="rounded bg-stone-200 px-1 py-0.5 text-[10px] leading-none text-stone-600 dark:bg-stone-800 dark:text-stone-400"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                  <span className="text-xs text-stone-400">{relativeTime(summary.updatedAt)}</span>
+                </div>
               </div>
               <div className="flex shrink-0 gap-0.5 opacity-0 transition group-hover:opacity-100">
                 <button
                   type="button"
-                  onClick={(e) => handleRename(e, thread.id, thread.title)}
+                  onClick={(e) => handleRename(e, summary)}
                   aria-label="Rename thread"
                   className="rounded p-1 hover:bg-stone-200 dark:hover:bg-stone-700"
                 >
@@ -234,7 +268,7 @@ export function ThreadsView() {
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => handleDelete(e, thread.id, thread.title)}
+                  onClick={(e) => handleDelete(e, summary)}
                   aria-label="Delete thread"
                   className="rounded p-1 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/10"
                 >
@@ -247,7 +281,7 @@ export function ThreadsView() {
       </aside>
 
       <div
-        onMouseDown={handleThreadsDragStart}
+        onMouseDown={handleDragStart}
         role="separator"
         aria-orientation="vertical"
         title="Drag to resize"
@@ -255,13 +289,13 @@ export function ThreadsView() {
       />
 
       <div className="min-w-0 flex-1">
-        {selectedRun && selectedThread ? (
-          <ChatPane slug={selectedRun} threadId={selectedThread} />
+        {selectedSummary ? (
+          <ChatPane target={targetOf(selectedSummary)} />
         ) : (
           <EmptyState
             icon={<MessagesSquare className="h-8 w-8" />}
-            title="Pick a run to start chatting"
-            description="Select a run on the left, then a thread (or start a new one) to chat with it."
+            title="Pick a thread to start chatting"
+            description="Select a thread on the left, or start a new one with the + button."
           />
         )}
       </div>

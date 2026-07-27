@@ -185,4 +185,48 @@ describe("LocalFileStore", () => {
       expect(sources).toContain("b");
     });
   });
+
+  describe("listDocSources / deleteDocChunksBySource", () => {
+    function chunkInput(sourceUrl: string, sourceTitle: string, origin?: "crawl" | "upload" | "link") {
+      return {
+        content: "content",
+        metadata: { sourceUrl, sourceTitle, section: null, topic: "general" as const, origin },
+        tokenCount: 10,
+        embedding: [0.1],
+      };
+    }
+
+    it("groups chunks by source, one row per sourceUrl with a real chunk count", async () => {
+      const { store, platformId } = await LocalFileStore.create("Docs Sources", "custom");
+      await store.insertDocChunks(platformId, [
+        chunkInput("https://a.com", "A", "crawl"),
+        chunkInput("https://a.com", "A", "crawl"),
+        chunkInput("scout-upload://p1/notes.pdf", "notes.pdf", "upload"),
+      ]);
+
+      const sources = await store.listDocSources!(platformId);
+      expect(sources).toHaveLength(2);
+      const a = sources.find((s) => s.sourceUrl === "https://a.com");
+      const upload = sources.find((s) => s.sourceUrl === "scout-upload://p1/notes.pdf");
+      expect(a?.chunkCount).toBe(2);
+      expect(a?.origin).toBe("crawl");
+      expect(upload?.chunkCount).toBe(1);
+      expect(upload?.origin).toBe("upload");
+    });
+
+    it("removes only the chunks matching the given source", async () => {
+      const { store, platformId } = await LocalFileStore.create("Deletable Docs", "custom");
+      await store.insertDocChunks(platformId, [
+        chunkInput("https://a.com", "A", "crawl"),
+        chunkInput("scout-upload://p1/notes.pdf", "notes.pdf", "upload"),
+      ]);
+
+      const removed = await store.deleteDocChunksBySource!(platformId, "scout-upload://p1/notes.pdf");
+      expect(removed).toBe(1);
+
+      const remaining = await store.listDocSources!(platformId);
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]!.sourceUrl).toBe("https://a.com");
+    });
+  });
 });

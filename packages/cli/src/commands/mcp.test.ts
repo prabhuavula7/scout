@@ -34,6 +34,7 @@ vi.mock("../config.js", () => ({
   resolveLLMProvider: vi.fn(async () => ({
     name: "fake",
     complete: vi.fn(async () => "- Confirmed pagination uses a cursor param, not page."),
+    embed: vi.fn(async (texts: string[]) => texts.map(() => [0.1, 0.2, 0.3])),
   })),
   resolveSearchProvider: vi.fn(async () => undefined),
 }));
@@ -90,6 +91,7 @@ describe("scout mcp server (end-to-end over the MCP protocol)", () => {
     expect(names).toEqual(
       [
         "ask_platform",
+        "attach_document_platform",
         "diff_platform",
         "export_platform",
         "generate_platform",
@@ -293,5 +295,147 @@ describe("scout mcp server (end-to-end over the MCP protocol)", () => {
     expect(askResult.isError).toBe(true);
     const exportResult = await client.callTool({ name: "export_platform", arguments: { slug: "nope" } });
     expect(exportResult.isError).toBe(true);
+  });
+
+  describe("ask_platform (multi-platform)", () => {
+    it("rejects a call passing both slug and slugs, or neither", async () => {
+      const client = await connectedClient();
+
+      const both = await client.callTool({
+        name: "ask_platform",
+        arguments: { slug: "a", slugs: ["a", "b"], question: "hi" },
+      });
+      expect(both.isError).toBe(true);
+
+      const neither = await client.callTool({ name: "ask_platform", arguments: { question: "hi" } });
+      expect(neither.isError).toBe(true);
+    });
+
+    it("reports a clear error when slugs is given without a title", async () => {
+      const { store: a } = await LocalFileStore.create("Multi A", "custom");
+      const { store: b } = await LocalFileStore.create("Multi B", "custom");
+      const client = await connectedClient();
+
+      const result = await client.callTool({
+        name: "ask_platform",
+        arguments: { slugs: [a.slug, b.slug], question: "hi" },
+      });
+      expect(result.isError).toBe(true);
+      expect(firstText(result)).toMatch(/needs "title"/i);
+    });
+
+    it("reports a clear error for an unknown slug inside slugs", async () => {
+      const { store: a } = await LocalFileStore.create("Multi Known", "custom");
+      const client = await connectedClient();
+
+      const result = await client.callTool({
+        name: "ask_platform",
+        arguments: { slugs: [a.slug, "nope"], question: "hi", title: "Cross-platform" },
+      });
+      expect(result.isError).toBe(true);
+      expect(firstText(result)).toContain("nope");
+    });
+
+    it("asks across multiple platforms, then reuses the same thread on a later call with the same slugs and title", async () => {
+      const { store: a } = await LocalFileStore.create("Multi Reuse A", "custom");
+      const { store: b } = await LocalFileStore.create("Multi Reuse B", "custom");
+      const client = await connectedClient();
+
+      const first = await client.callTool({
+        name: "ask_platform",
+        arguments: { slugs: [a.slug, b.slug], question: "How do these relate?", title: "Reuse thread" },
+      });
+      expect(first.isError).toBeFalsy();
+      const firstPayload = JSON.parse(firstText(first));
+      expect(firstPayload.threadId).toBeDefined();
+
+      const second = await client.callTool({
+        name: "ask_platform",
+        arguments: { slugs: [b.slug, a.slug], question: "Follow-up question", title: "Reuse thread" },
+      });
+      const secondPayload = JSON.parse(firstText(second));
+      expect(secondPayload.threadId).toBe(firstPayload.threadId);
+
+      const { MultiRunThreadStore: Store } = await import("@scout/store");
+      const history = await Store.getHistory(firstPayload.threadId);
+      expect(history.map((m) => m.content)).toEqual([
+        "How do these relate?",
+        firstPayload.answer,
+        "Follow-up question",
+        secondPayload.answer,
+      ]);
+    });
+  });
+
+  describe("attach_document_platform", () => {
+    it("attaches a local file, storing chunks tagged origin: upload", async () => {
+      const { store, platformId } = await LocalFileStore.create("Attachable API", "custom");
+      const filePath = path.join(tmpHome, "runbook.md");
+      await fs.writeFile(
+        filePath,
+        `## Internal runbook\n\n${"This service retries failed webhooks up to five times with exponential backoff. ".repeat(4)}`,
+      );
+
+      const client = await connectedClient();
+      const result = await client.callTool({
+        name: "attach_document_platform",
+        arguments: { slug: store.slug, filePath },
+      });
+      expect(result.isError).toBeFalsy();
+      const payload = JSON.parse(firstText(result));
+      expect(payload.chunksStored).toBeGreaterThan(0);
+      expect(payload.sourceUrl).toBe(`scout-upload://${platformId}/runbook.md`);
+
+      const sources = await store.listDocSources!(platformId);
+      expect(sources[0]!.origin).toBe("upload");
+    });
+
+    it("attaches a link, storing chunks tagged origin: link", async () => {
+      const { store } = await LocalFileStore.create("Linkable API", "custom");
+      const html = `<html><head><title>Webhooks guide</title></head><body><main><p>${"Configure a webhook endpoint to receive real-time events. ".repeat(
+        6,
+      )}</p></main></body></html>`;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          headers: new Headers({ "content-type": "text/html" }),
+          arrayBuffer: async () => new TextEncoder().encode(html).buffer,
+        }),
+      );
+
+      const client = await connectedClient();
+      const result = await client.callTool({
+        name: "attach_document_platform",
+        arguments: { slug: store.slug, url: "https://blog.example.com/webhooks" },
+      });
+      expect(result.isError).toBeFalsy();
+      const payload = JSON.parse(firstText(result));
+      expect(payload.sourceTitle).toBe("Webhooks guide");
+      vi.unstubAllGlobals();
+    });
+
+    it("rejects a call passing both filePath and url, or neither", async () => {
+      const { store } = await LocalFileStore.create("Ambiguous API", "custom");
+      const client = await connectedClient();
+
+      const both = await client.callTool({
+        name: "attach_document_platform",
+        arguments: { slug: store.slug, filePath: "/tmp/x.md", url: "https://example.com" },
+      });
+      expect(both.isError).toBe(true);
+
+      const neither = await client.callTool({ name: "attach_document_platform", arguments: { slug: store.slug } });
+      expect(neither.isError).toBe(true);
+    });
+
+    it("reports a clear error for an unknown slug instead of throwing", async () => {
+      const client = await connectedClient();
+      const result = await client.callTool({
+        name: "attach_document_platform",
+        arguments: { slug: "nope", url: "https://example.com" },
+      });
+      expect(result.isError).toBe(true);
+    });
   });
 });

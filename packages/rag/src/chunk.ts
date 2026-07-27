@@ -5,6 +5,8 @@ export interface ChunkInput {
   markdown: string;
   sourceUrl: string;
   sourceTitle: string;
+  /** Defaults to "crawl" (the original --docs crawler's use of this function). */
+  origin?: DocChunkMetadata["origin"];
 }
 
 export interface Chunk {
@@ -112,7 +114,7 @@ function splitByTokenBudget(text: string, maxTokens: number, overlapTokens: numb
  * Splits crawled documentation into semantically coherent, token-bounded
  * chunks tagged with a topic label, ready for embedding.
  */
-export function chunkDocument({ markdown, sourceUrl, sourceTitle }: ChunkInput): Chunk[] {
+export function chunkDocument({ markdown, sourceUrl, sourceTitle, origin = "crawl" }: ChunkInput): Chunk[] {
   const sections = splitIntoSections(markdown);
   const chunks: Chunk[] = [];
 
@@ -128,6 +130,7 @@ export function chunkDocument({ markdown, sourceUrl, sourceTitle }: ChunkInput):
           sourceTitle,
           section: section.heading,
           topic: inferTopic(withHeading),
+          origin,
         },
       });
     }

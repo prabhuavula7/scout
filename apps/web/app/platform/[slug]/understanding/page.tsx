@@ -1,9 +1,19 @@
 "use client";
 
-import { use, useState } from "react";
-import { BrainCircuit, Clipboard, ClipboardCheck, Code2, Search } from "lucide-react";
+import { use, useRef, useState } from "react";
+import { BrainCircuit, Clipboard, ClipboardCheck, Code2, FileUp, Link2, Search, Trash2 } from "lucide-react";
 import { EmptyState } from "@scout/ui";
-import { useChatThreads, useGenerateCode, useHandoff, useRun, useRunResearch } from "@/lib/use-runs";
+import {
+  useAttachFile,
+  useAttachLink,
+  useChatThreads,
+  useDocSources,
+  useGenerateCode,
+  useHandoff,
+  useRemoveDocSource,
+  useRun,
+  useRunResearch,
+} from "@/lib/use-runs";
 import { MermaidDiagram } from "@/components/mermaid-diagram";
 import { TableOfContents } from "@/components/table-of-contents";
 import { PipelineProgress } from "@/components/pipeline-progress";
@@ -43,6 +53,7 @@ const SECTIONS = [
   { id: "potential-pitfalls", label: "Potential pitfalls" },
   { id: "missing-documentation", label: "Missing documentation" },
   { id: "security-observations", label: "Security observations" },
+  { id: "attached-documents", label: "Attached documents" },
   { id: "further-reading", label: "Further reading" },
 ] as const;
 
@@ -53,9 +64,18 @@ export default function UnderstandingPage({ params }: { params: Promise<{ slug: 
   const generate = useGenerateCode(slug);
   const handoff = useHandoff(slug);
   const { data: threads } = useChatThreads(slug);
+  const { data: docSources } = useDocSources(slug);
+  const attachFile = useAttachFile(slug);
+  const attachLink = useAttachLink(slug);
+  const removeDocSource = useRemoveDocSource(slug);
   const [lang, setLang] = useState<"ts" | "py">("ts");
   const [copied, setCopied] = useState(false);
   const [handoffThreadId, setHandoffThreadId] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachedDocs = (Array.isArray(docSources) ? docSources : []).filter(
+    (s) => s.origin === "upload" || s.origin === "link",
+  );
   const understanding = run?.understanding;
   const resources = run?.resources ?? [];
 
@@ -277,6 +297,89 @@ export default function UnderstandingPage({ params }: { params: Promise<{ slug: 
         </Section>
         <Section id="security-observations" title="Security observations">
           <BulletList items={understanding.securityObservations} />
+        </Section>
+        <Section id="attached-documents" title="Attached documents">
+          <p className="mb-3 text-xs text-stone-500">
+            Ground chat and handoffs in your own material too, beyond crawled docs: a runbook, a contract, an
+            internal spec, or a link to an article. PDF, docx/xlsx/pptx, odt/odp/ods, rtf, csv, md, html, txt, json,
+            or yaml, up to 10 MB.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) attachFile.mutate(file);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={attachFile.isPending}
+              className="flex items-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-stone-50 disabled:opacity-50 dark:border-stone-800 dark:text-stone-300 dark:hover:bg-stone-900"
+            >
+              <FileUp className="h-3 w-3" strokeWidth={2} />
+              {attachFile.isPending ? "Uploading…" : "Upload a file"}
+            </button>
+            <form
+              className="flex items-center gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!linkUrl.trim()) return;
+                attachLink.mutate(linkUrl.trim(), { onSuccess: () => setLinkUrl("") });
+              }}
+            >
+              <input
+                type="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                placeholder="https://example.com/article"
+                className="w-64 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-stone-700 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300"
+              />
+              <button
+                type="submit"
+                disabled={attachLink.isPending || !linkUrl.trim()}
+                className="flex items-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-stone-50 disabled:opacity-50 dark:border-stone-800 dark:text-stone-300 dark:hover:bg-stone-900"
+              >
+                <Link2 className="h-3 w-3" strokeWidth={2} />
+                {attachLink.isPending ? "Fetching…" : "Attach link"}
+              </button>
+            </form>
+          </div>
+          {(attachFile.isError || attachLink.isError) && (
+            <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+              {((attachFile.error ?? attachLink.error) as Error).message}
+            </p>
+          )}
+          {attachedDocs.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {attachedDocs.map((doc) => (
+                <li
+                  key={doc.sourceUrl}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-stone-200 px-3 py-1.5 text-xs dark:border-stone-800"
+                >
+                  <span className="truncate" title={doc.sourceUrl}>
+                    {doc.origin === "link" ? <Link2 className="mr-1.5 inline h-3 w-3" /> : <FileUp className="mr-1.5 inline h-3 w-3" />}
+                    {doc.sourceTitle}
+                    <span className="ml-1.5 text-stone-400">
+                      ({doc.chunkCount} chunk{doc.chunkCount === 1 ? "" : "s"})
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeDocSource.mutate(doc.sourceUrl)}
+                    aria-label={`Remove ${doc.sourceTitle}`}
+                    className="shrink-0 rounded p-1 text-stone-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/10"
+                  >
+                    <Trash2 className="h-3 w-3" strokeWidth={2} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </Section>
         <Section id="further-reading" title="Further reading">
           <button

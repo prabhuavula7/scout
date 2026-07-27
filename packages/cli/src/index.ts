@@ -14,13 +14,14 @@ import { registerHandoffCommand } from "./commands/handoff.js";
 import { registerDiffCommand } from "./commands/diff.js";
 import { registerResearchCommand } from "./commands/research.js";
 import { registerMcpCommand } from "./commands/mcp.js";
+import { registerDocsCommand } from "./commands/docs.js";
 
 const program = new Command();
 
 program
   .name("scout")
   .description("Understand any enterprise platform in minutes. Local, no login, no server.")
-  .version("2.2.1");
+  .version("2.4.0");
 
 registerUnderstandCommand(program);
 registerListCommand(program);
@@ -37,6 +38,7 @@ registerHandoffCommand(program);
 registerDiffCommand(program);
 registerResearchCommand(program);
 registerMcpCommand(program);
+registerDocsCommand(program);
 
 program.parseAsync(process.argv).catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));

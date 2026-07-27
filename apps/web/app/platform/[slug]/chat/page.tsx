@@ -18,7 +18,7 @@ export default function ChatPage({ params }: { params: Promise<{ slug: string }>
     <div
       className={`mx-auto h-[calc(100vh-14rem)] transition-[max-width] duration-200 ${collapsed ? "max-w-3xl" : "max-w-2xl"}`}
     >
-      <ChatPane slug={slug} threadId={MAIN_THREAD_ID} />
+      <ChatPane target={{ kind: "single", slug, threadId: MAIN_THREAD_ID }} />
     </div>
   );
 }

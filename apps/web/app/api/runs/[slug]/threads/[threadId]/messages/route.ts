@@ -37,7 +37,14 @@ export async function POST(
   try {
     const llm = await resolveLLMProvider();
     const searchProvider = await resolveSearchProvider();
-    const result = await runAgenticChatAgent(store, llm, searchProvider, platformId, body.message, history);
+    const platformName = (await store.getPlatform()).name;
+    const result = await runAgenticChatAgent(
+      [{ platformId, slug: store.slug, name: platformName, store }],
+      llm,
+      searchProvider,
+      body.message,
+      history,
+    );
     const saved = await store.appendChatMessage(threadId, "assistant", result.answer, result.sources);
     return NextResponse.json(saved);
   } catch (error) {

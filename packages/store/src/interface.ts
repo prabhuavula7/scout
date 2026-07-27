@@ -82,5 +82,18 @@ export interface AgentStore {
     limit: number,
   ): Promise<HybridSearchResult[]>;
 
+  /** Every distinct source (crawled page, uploaded file, or attached link)
+   * behind this run's doc chunks, one row per sourceUrl regardless of how
+   * many chunks it produced. Powers the "attached documents" list in the
+   * web UI and CLI so a user can see and remove what they added. Optional:
+   * the dormant hosted-mode store doesn't implement this yet. */
+  listDocSources?(
+    platformId: string,
+  ): Promise<Array<{ sourceUrl: string; sourceTitle: string; chunkCount: number; origin?: DocChunkMetadata["origin"] }>>;
+  /** Removes every chunk whose metadata.sourceUrl matches, e.g. undoing an
+   * upload or attached link added by mistake. Returns the number removed.
+   * Optional for the same reason as listDocSources. */
+  deleteDocChunksBySource?(platformId: string, sourceUrl: string): Promise<number>;
+
   upsertUnderstanding(platformId: string, data: PlatformUnderstanding): Promise<void>;
 }

@@ -3,3 +3,4 @@ export * from "./local-file-store.js";
 export * from "./search.js";
 export * from "./paths.js";
 export * from "./config.js";
+export * from "./multi-thread-store.js";

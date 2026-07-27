@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { MessageSquareText, Send } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { EmptyState } from "@scout/ui";
-import { useChatMessages, useSendChatMessage } from "@/lib/use-runs";
+import { useSendThreadMessage, useThreadMessages, type ThreadTarget } from "@/lib/use-runs";
 
 const MARKDOWN_COMPONENTS = {
   p: (props: React.ComponentPropsWithoutRef<"p">) => <p className="mb-2 last:mb-0" {...props} />,
@@ -53,13 +53,16 @@ function TypingBubble() {
   );
 }
 
-export function ChatPane({ slug, threadId }: { slug: string; threadId: string }) {
-  const { data: messages } = useChatMessages(slug, threadId);
-  const sendMessage = useSendChatMessage(slug, threadId);
+export function ChatPane({ target }: { target: ThreadTarget }) {
+  const { data: messages } = useThreadMessages(target);
+  const sendMessage = useSendThreadMessage(target);
   const [draft, setDraft] = useState("");
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Multi-run threads mix citations from several platforms, so tag each one
+  // to say which; a single-run thread has nothing to disambiguate.
+  const showPlatformTags = target.kind === "multi";
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -70,7 +73,7 @@ export function ChatPane({ slug, threadId }: { slug: string; threadId: string })
   useEffect(() => {
     setDraft("");
     setPendingMessage(null);
-  }, [threadId]);
+  }, [target.threadId]);
 
   function submitDraft() {
     const trimmed = draft.trim();
@@ -87,8 +90,12 @@ export function ChatPane({ slug, threadId }: { slug: string; threadId: string })
         {(!messages || messages.length === 0) && !pendingMessage && (
           <EmptyState
             icon={<MessageSquareText className="h-8 w-8" />}
-            title="Ask about this platform"
-            description='Try: "How does authentication work?" or "How do I paginate through results?"'
+            title={showPlatformTags ? "Ask about these platforms" : "Ask about this platform"}
+            description={
+              showPlatformTags
+                ? 'Try: "How would these two talk to each other?" or "Which one handles pagination differently?"'
+                : 'Try: "How does authentication work?" or "How do I paginate through results?"'
+            }
           />
         )}
         {messages?.map((message) => (
@@ -107,33 +114,51 @@ export function ChatPane({ slug, threadId }: { slug: string; threadId: string })
             )}
             {message.citations.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5 border-t border-stone-300/50 pt-2 dark:border-stone-700/50">
-                {message.citations.map((source, i) =>
-                  source.type === "model_knowledge" ? (
-                    <span
-                      key={`${i}-${source.ref}`}
-                      title="Not from this platform's docs -- the model's own general knowledge, unverified"
-                      className="max-w-[14rem] truncate rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-400"
-                    >
-                      unverified (model knowledge)
-                    </span>
-                  ) : (
+                {message.citations.map((source, i) => {
+                  if (source.type === "model_knowledge") {
+                    return (
+                      <span
+                        key={`${i}-${source.ref}`}
+                        title="Not from this platform's docs -- the model's own general knowledge, unverified"
+                        className="max-w-[14rem] truncate rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-400"
+                      >
+                        unverified (model knowledge)
+                      </span>
+                    );
+                  }
+                  const badgeClass =
+                    source.type === "web"
+                      ? "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400"
+                      : "bg-stone-200 text-stone-600 dark:bg-stone-800 dark:text-stone-400";
+                  const platformTag = showPlatformTags && source.platformName ? `${source.platformName}: ` : "";
+                  const label = `[${i + 1}] ${source.type === "web" ? "web: " : platformTag}${source.title ?? source.ref}`;
+                  // Uploaded files/links use a synthetic scout-upload:// (or a
+                  // real but potentially sign-in-gated) ref -- only crawled
+                  // docs and plain http(s) links are guaranteed navigable.
+                  if (!/^https?:\/\//.test(source.ref)) {
+                    return (
+                      <span
+                        key={`${i}-${source.ref}`}
+                        title={source.title ?? source.ref}
+                        className={`max-w-[10rem] truncate rounded px-1.5 py-0.5 text-xs ${badgeClass}`}
+                      >
+                        {label}
+                      </span>
+                    );
+                  }
+                  return (
                     <a
                       key={`${i}-${source.ref}`}
                       href={source.ref}
                       target="_blank"
                       rel="noreferrer"
                       title={source.title ?? source.ref}
-                      className={`max-w-[10rem] truncate rounded px-1.5 py-0.5 text-xs hover:underline ${
-                        source.type === "web"
-                          ? "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400"
-                          : "bg-stone-200 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
-                      }`}
+                      className={`max-w-[10rem] truncate rounded px-1.5 py-0.5 text-xs hover:underline ${badgeClass}`}
                     >
-                      [{i + 1}] {source.type === "web" ? "web: " : ""}
-                      {source.title ?? source.ref}
+                      {label}
                     </a>
-                  ),
-                )}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -173,7 +198,7 @@ export function ChatPane({ slug, threadId }: { slug: string; threadId: string })
             }
           }}
           rows={1}
-          placeholder="Ask a question about this platform… (Shift+Enter for a new line)"
+          placeholder={`Ask a question about ${showPlatformTags ? "these platforms" : "this platform"}… (Shift+Enter for a new line)`}
           className="max-h-40 w-full resize-none rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-accent-500 dark:border-stone-700 dark:bg-stone-900"
         />
         <button

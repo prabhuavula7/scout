@@ -11,6 +11,7 @@ export * from "./generate-code.js";
 export * from "./understanding-diff.js";
 export * from "./assemble-handoff.js";
 export * from "./summarize-thread.js";
+export * from "./upload-docs-agent.js";
 export * from "./research-agent.js";
 export * from "./search/provider.js";
 export * from "./search/fallback.js";

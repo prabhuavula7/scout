@@ -18,6 +18,10 @@ export const DocChunkMetadata = z.object({
     "best_practices",
     "general",
   ]),
+  /** How this chunk entered the corpus: crawled from the platform's --docs
+   * URLs, a file the user uploaded, or a link the user attached directly.
+   * Optional and absent on chunks stored before this field existed. */
+  origin: z.enum(["crawl", "upload", "link"]).optional(),
 });
 export type DocChunkMetadata = z.infer<typeof DocChunkMetadata>;
 

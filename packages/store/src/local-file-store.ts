@@ -14,6 +14,7 @@ import type {
 import type { AgentStore, DocChunkInput, HybridSearchResult, ImportResultFields } from "./interface.js";
 import { localHybridSearch, type StoredChunk } from "./search.js";
 import { historyDir, runDir, runsRoot, slugify } from "./paths.js";
+import { appendJsonl, readJson, readJsonl, writeJson } from "./fs-json.js";
 
 export interface PlatformRecord {
   id: string;
@@ -70,26 +71,6 @@ export interface AgentRunRecord {
   error: string | null;
   startedAt: string;
   finishedAt: string | null;
-}
-
-async function readJson<T>(filePath: string, fallback: T): Promise<T> {
-  try {
-    const raw = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(raw) as T;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return fallback;
-    throw error;
-  }
-}
-
-async function writeJson(filePath: string, value: unknown): Promise<void> {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(value, null, 2), "utf-8");
-}
-
-async function appendJsonl(filePath: string, value: unknown): Promise<void> {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.appendFile(filePath, `${JSON.stringify(value)}\n`, "utf-8");
 }
 
 /**
@@ -287,6 +268,27 @@ export class LocalFileStore implements AgentStore {
     return localHybridSearch(chunks, queryEmbedding, queryText, limit);
   }
 
+  async listDocSources(
+    _platformId: string,
+  ): Promise<Array<{ sourceUrl: string; sourceTitle: string; chunkCount: number; origin?: DocChunkMetadata["origin"] }>> {
+    const chunks = await this.getChunks();
+    const bySource = new Map<string, { sourceTitle: string; chunkCount: number; origin?: DocChunkMetadata["origin"] }>();
+    for (const chunk of chunks) {
+      const key = chunk.metadata.sourceUrl;
+      const existing = bySource.get(key);
+      if (existing) existing.chunkCount++;
+      else bySource.set(key, { sourceTitle: chunk.metadata.sourceTitle, chunkCount: 1, origin: chunk.metadata.origin });
+    }
+    return [...bySource.entries()].map(([sourceUrl, v]) => ({ sourceUrl, ...v }));
+  }
+
+  async deleteDocChunksBySource(_platformId: string, sourceUrl: string): Promise<number> {
+    const chunks = await this.getChunks();
+    const remaining = chunks.filter((c) => c.metadata.sourceUrl !== sourceUrl);
+    await writeJson(path.join(this.dir, "chunks.json"), remaining);
+    return chunks.length - remaining.length;
+  }
+
   async getUnderstanding(): Promise<PlatformUnderstanding | null> {
     return readJson<PlatformUnderstanding | null>(path.join(this.dir, "understanding.json"), null);
   }
@@ -318,11 +320,7 @@ export class LocalFileStore implements AgentStore {
   }
 
   private async readAllChatMessages(): Promise<ChatMessageRecord[]> {
-    const raw = await fs.readFile(path.join(this.dir, "chat.jsonl"), "utf-8").catch(() => "");
-    return raw
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => JSON.parse(line) as ChatMessageRecord);
+    return readJsonl<ChatMessageRecord>(path.join(this.dir, "chat.jsonl"));
   }
 
   private async getThreadsRaw(): Promise<ChatThreadRecord[]> {

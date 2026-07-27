@@ -116,4 +116,35 @@ describe("UnderstandingPage", () => {
     expect(await screen.findByText(/no-endpoints-available/)).toBeInTheDocument();
     expect(screen.getByText("// stub code")).toBeInTheDocument();
   });
+
+  it("lists an attached document and removes it when its trash button is clicked", async () => {
+    let attached = true;
+    const fetchMock = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/documents")) {
+        if (init?.method === "DELETE") {
+          attached = false;
+          return { ok: true, json: async () => ({ removed: 1 }) };
+        }
+        return {
+          ok: true,
+          json: async () =>
+            attached
+              ? [{ sourceUrl: "scout-upload://p1/runbook.md", sourceTitle: "runbook.md", chunkCount: 3, origin: "upload" }]
+              : [],
+        };
+      }
+      return { ok: true, json: async () => RUN_WITH_UNDERSTANDING };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderWithQueryClient("some-platform");
+    await screen.findByText("A test summary.");
+
+    expect(await screen.findByText("runbook.md")).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /remove runbook\.md/i }));
+
+    expect(screen.queryByText("runbook.md")).not.toBeInTheDocument();
+  });
 });

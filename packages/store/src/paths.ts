@@ -14,6 +14,13 @@ export function runsRoot(): string {
   return path.join(scoutHome(), "runs");
 }
 
+/** Home for threads that span more than one run (see MultiRunThreadStore).
+ * A single-run thread stays inside that run's own directory under runsRoot;
+ * this is only for threads that don't belong to any one run. */
+export function threadsRoot(): string {
+  return path.join(scoutHome(), "threads");
+}
+
 export function connectorsOverrideDir(): string {
   return path.join(scoutHome(), "connectors");
 }

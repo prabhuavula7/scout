@@ -138,6 +138,56 @@ async function seedRun() {
   return { store, platformId };
 }
 
+async function seedSecondRun() {
+  const { store, platformId } = await LocalFileStore.create("Gadget API", "custom");
+  await store.applyImportResult(platformId, {
+    name: "Gadget API",
+    baseUrl: "https://api.gadgets.test",
+    authScheme: "bearer_token",
+    rawSpec: null,
+  });
+  await store.insertEndpoints(platformId, [
+    {
+      group: "gadgets",
+      method: "GET",
+      path: "/gadgets",
+      summary: "List gadgets",
+      description: null,
+      parameters: [],
+      requestBodySchema: null,
+      responseSchema: null,
+      exampleRequest: null,
+      exampleResponse: null,
+    },
+  ]);
+  await store.insertDocChunks(platformId, [
+    {
+      content: "Gadgets support real-time sync via a webhook that fires on every state change.",
+      metadata: { sourceUrl: "https://docs.gadgets.test/sync", sourceTitle: "Sync", section: null, topic: "webhooks" },
+      tokenCount: 15,
+      embedding: [0.4, 0.5, 0.6],
+    },
+  ]);
+  await store.upsertUnderstanding(platformId, {
+    platformId,
+    summary: "s",
+    architectureOverview: "a",
+    authenticationFlow: "Send a Bearer token.",
+    dataModel: [],
+    entityRelationships: [],
+    commonWorkflows: [{ name: "List gadgets", steps: ["Call GET /gadgets to list all gadgets"] }],
+    integrationOpportunities: [],
+    potentialPitfalls: [],
+    missingDocumentation: [],
+    securityObservations: [],
+    mermaidSequenceDiagram: "sequenceDiagram",
+    mermaidErDiagram: "erDiagram",
+    citations: [],
+    generatedAt: new Date().toISOString(),
+  });
+  return { store, platformId };
+}
+
 describe("runAgenticChatAgent (real tool dispatch, scripted LLM turns)", () => {
   it("calls search_docs for real, then answers grounded in the real retrieved excerpt", async () => {
     const { store, platformId } = await seedRun();
@@ -146,7 +196,7 @@ describe("runAgenticChatAgent (real tool dispatch, scripted LLM turns)", () => {
       { text: "Idempotency keys stop a retried request from double-charging you [1].", toolCalls: [] },
     ]);
 
-    const result = await runAgenticChatAgent(store, llm, undefined, platformId, "How does retry safety work?", []);
+    const result = await runAgenticChatAgent([{ platformId, slug: store.slug, name: "Widget API", store }], llm, undefined, "How does retry safety work?", []);
 
     expect(result.answer).toContain("double-charging");
     expect(result.sources).toEqual([
@@ -166,7 +216,7 @@ describe("runAgenticChatAgent (real tool dispatch, scripted LLM turns)", () => {
       { text: "Here's a starter script for listing widgets.", toolCalls: [] },
     ]);
 
-    const result = await runAgenticChatAgent(store, llm, undefined, platformId, "Give me starter code", []);
+    const result = await runAgenticChatAgent([{ platformId, slug: store.slug, name: "Widget API", store }], llm, undefined, "Give me starter code", []);
 
     expect(result.answer).toContain("starter script");
     const secondCallMessages = llm.calls[1]!.messages;
@@ -184,7 +234,7 @@ describe("runAgenticChatAgent (real tool dispatch, scripted LLM turns)", () => {
       { text: "I've assembled a handoff brief for your coding agent.", toolCalls: [] },
     ]);
 
-    const result = await runAgenticChatAgent(store, llm, undefined, platformId, "Prep a handoff for Claude Code", []);
+    const result = await runAgenticChatAgent([{ platformId, slug: store.slug, name: "Widget API", store }], llm, undefined, "Prep a handoff for Claude Code", []);
 
     expect(result.answer).toContain("handoff brief");
     const secondCallMessages = llm.calls[1]!.messages;
@@ -199,7 +249,7 @@ describe("runAgenticChatAgent (real tool dispatch, scripted LLM turns)", () => {
       { text: "Outside these docs, idempotency is a common REST API pattern [1].", toolCalls: [] },
     ]);
 
-    const result = await runAgenticChatAgent(store, llm, new FakeSearchProvider(), platformId, "What's the wider context here?", []);
+    const result = await runAgenticChatAgent([{ platformId, slug: store.slug, name: "Widget API", store }], llm, new FakeSearchProvider(), "What's the wider context here?", []);
 
     expect(result.sources).toEqual([
       expect.objectContaining({ type: "web", ref: "https://blog.example.com/idempotency", title: "Idempotency keys explained" }),
@@ -210,7 +260,7 @@ describe("runAgenticChatAgent (real tool dispatch, scripted LLM turns)", () => {
     const { store, platformId } = await seedRun();
     const llm = new ScriptedToolLLM([{ text: "No tools needed.", toolCalls: [] }]);
 
-    await runAgenticChatAgent(store, llm, undefined, platformId, "hi", []);
+    await runAgenticChatAgent([{ platformId, slug: store.slug, name: "Widget API", store }], llm, undefined, "hi", []);
 
     const toolNames = llm.calls[0]!.tools.map((t) => t.name);
     expect(toolNames).not.toContain("web_search");
@@ -220,7 +270,7 @@ describe("runAgenticChatAgent (real tool dispatch, scripted LLM turns)", () => {
     const { store, platformId } = await seedRun();
     const llm = new ScriptedToolLLM([{ text: "In general, REST APIs commonly use Bearer tokens.", toolCalls: [] }]);
 
-    const result = await runAgenticChatAgent(store, llm, undefined, platformId, "What's a REST API in general?", []);
+    const result = await runAgenticChatAgent([{ platformId, slug: store.slug, name: "Widget API", store }], llm, undefined, "What's a REST API in general?", []);
 
     expect(result.sources).toEqual([{ type: "model_knowledge", ref: "model" }]);
   });
@@ -233,7 +283,7 @@ describe("runAgenticChatAgent (real tool dispatch, scripted LLM turns)", () => {
       { text: "Here's how auth works, plus a starter script [1].", toolCalls: [] },
     ]);
 
-    const result = await runAgenticChatAgent(store, llm, undefined, platformId, "How do I authenticate and get started?", []);
+    const result = await runAgenticChatAgent([{ platformId, slug: store.slug, name: "Widget API", store }], llm, undefined, "How do I authenticate and get started?", []);
 
     expect(result.answer).toContain("starter script");
     expect(result.sources.some((s) => s.type === "docs")).toBe(true);
@@ -242,7 +292,13 @@ describe("runAgenticChatAgent (real tool dispatch, scripted LLM turns)", () => {
 
   it("falls back to single-shot grounded RAG when the provider's tool-calling fails outright on the first turn", async () => {
     const { store, platformId } = await seedRun();
-    const result = await runAgenticChatAgent(store, new ThrowingLLM(), undefined, platformId, "How does retry safety work?", []);
+    const result = await runAgenticChatAgent(
+      [{ platformId, slug: store.slug, name: "Widget API", store }],
+      new ThrowingLLM(),
+      undefined,
+      "How does retry safety work?",
+      [],
+    );
 
     expect(result.answer).toBe("fallback answer from single-shot RAG");
     // The fallback path (chat-agent.ts's runChatAgent) grounds via the same real store, so a
@@ -258,8 +314,63 @@ describe("runAgenticChatAgent (real tool dispatch, scripted LLM turns)", () => {
     }));
     const llm = new ScriptedToolLLM(turns);
 
-    const result = await runAgenticChatAgent(store, llm, undefined, platformId, "Keep going forever", []);
+    const result = await runAgenticChatAgent([{ platformId, slug: store.slug, name: "Widget API", store }], llm, undefined, "Keep going forever", []);
 
     expect(result.answer).toContain("couldn't settle on a final answer");
+  });
+
+  describe("multi-run threads (more than one platform in scope)", () => {
+    async function seedTwoPlatforms() {
+      const widget = await seedRun();
+      const gadget = await seedSecondRun();
+      return [
+        { platformId: widget.platformId, slug: widget.store.slug, name: "Widget API", store: widget.store },
+        { platformId: gadget.platformId, slug: gadget.store.slug, name: "Gadget API", store: gadget.store },
+      ];
+    }
+
+    it("merges search_docs results across every platform in scope and tags each source with which one it came from", async () => {
+      const platforms = await seedTwoPlatforms();
+      const llm = new ScriptedToolLLM([
+        { text: null, toolCalls: [toolCall("search_docs", { query: "webhooks and idempotency" })] },
+        { text: "Widgets use idempotency keys [1] and gadgets sync via webhooks [2].", toolCalls: [] },
+      ]);
+
+      const result = await runAgenticChatAgent(platforms, llm, undefined, "How do these two platforms handle real-time updates?", []);
+
+      const slugs = result.sources.filter((s) => s.type === "docs").map((s) => s.platformSlug);
+      expect(slugs).toContain("widget-api");
+      expect(slugs).toContain("gadget-api");
+    });
+
+    it("errors clearly instead of guessing when generate_starter_code is called without a target platform", async () => {
+      const platforms = await seedTwoPlatforms();
+      const llm = new ScriptedToolLLM([
+        { text: null, toolCalls: [toolCall("generate_starter_code", { lang: "ts" })] },
+        { text: "I need to know which platform.", toolCalls: [] },
+      ]);
+
+      await runAgenticChatAgent(platforms, llm, undefined, "Give me starter code", []);
+
+      const toolResult = llm.calls[1]!.messages.find((m) => m.role === "tool_result");
+      expect((toolResult as { content: string }).content).toMatch(/pass "platform"/i);
+      expect((toolResult as { content: string }).content).toContain("widget-api");
+      expect((toolResult as { content: string }).content).toContain("gadget-api");
+    });
+
+    it("generates real code for the specific platform named in the tool call", async () => {
+      const platforms = await seedTwoPlatforms();
+      const llm = new ScriptedToolLLM([
+        { text: null, toolCalls: [toolCall("generate_starter_code", { lang: "ts", platform: "gadget-api" })] },
+        { text: "Here's the Gadget API starter script.", toolCalls: [] },
+      ]);
+
+      await runAgenticChatAgent(platforms, llm, undefined, "Give me starter code for gadgets", []);
+
+      const toolResult = llm.calls[1]!.messages.find((m) => m.role === "tool_result");
+      const parsed = JSON.parse((toolResult as { content: string }).content);
+      expect(parsed.isStub).toBe(false);
+      expect(parsed.code).toContain("GADGET_API_API_KEY");
+    }, 10000);
   });
 });
