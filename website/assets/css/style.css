@@ -1254,7 +1254,13 @@ li code {
 .docs-lead {
   color: var(--fg-muted);
   font-size: 1.05rem;
-  margin: 0 0 40px;
+  margin: 0 0 20px;
+}
+
+.docs-title-divider {
+  height: 1px;
+  margin: 0 0 20px;
+  background: linear-gradient(to right, transparent, var(--border-strong), transparent);
 }
 
 .docs-section {
