@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Docs - Scout</title>
+  <meta name="description" content="Full reference for Scout: CLI commands, the twelve MCP tools, the web app's surfaces, generated code, connectors, Docker, and FAQ." />
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" />
+  <meta name="theme-color" content="#161412" />
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem("theme");
+        var theme = stored === "light" || stored === "dark"
+          ? stored
+          : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        if (theme === "dark") document.documentElement.classList.add("dark");
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+    <div class="site-nav">
+      <a class="brand" href="index.html">
+        <svg class="brand-mark" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="15" fill="var(--color-accent-500)"/>
+          <path d="M21.5 10.5 17.8 17.8 10.5 21.5 14.2 14.2 21.5 10.5Z" fill="#FFFAF5"/>
+          <circle cx="16" cy="16" r="2" fill="var(--color-accent-500)"/>
+          <circle cx="16" cy="16" r="1" fill="#FFFAF5"/>
+        </svg>
+        Scout
+      </a>
+      <nav class="nav-links" data-nav-links>
+        <a class="nav-link" href="index.html#features">Features</a>
+        <a class="nav-link" href="index.html#examples">Examples</a>
+        <a class="nav-link" href="index.html#compare">Compare</a>
+        <a class="nav-link" href="index.html#quickstart">Quickstart</a>
+        <a class="nav-link active" href="docs.html">Docs</a>
+        <a class="nav-link" href="https://github.com/prabhuavula7/scout" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="icon-btn" data-theme-toggle aria-label="Toggle theme"></button>
+        <button class="icon-btn menu-toggle" data-menu-toggle aria-label="Toggle menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </div>
+    </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="docs-layout">
+      <aside class="docs-sidebar">
+        <nav>
+          <div class="docs-group">
+            <div class="docs-group-title">Getting started</div>
+            <a href="#quickstart">Quickstart</a>
+            <a href="#why-scout">Why Scout exists</a>
+            <a href="#architecture">Architecture</a>
+          </div>
+          <div class="docs-group">
+            <div class="docs-group-title">CLI reference</div>
+            <a href="#cli-import">Understand &amp; import</a>
+            <a href="#cli-chat">Chat &amp; threads</a>
+            <a href="#cli-codegen">Generate &amp; handoff</a>
+            <a href="#cli-maintain">Maintain a run</a>
+            <a href="#cli-docs">Doc sources</a>
+            <a href="#cli-config">Connectors &amp; config</a>
+            <a href="#cli-runs">Runs &amp; MCP server</a>
+          </div>
+          <div class="docs-group">
+            <div class="docs-group-title">MCP reference</div>
+            <a href="#mcp-setup">Agent setup</a>
+            <a href="#mcp-tools">The twelve tools</a>
+            <a href="#mcp-workflow">Example workflow</a>
+          </div>
+          <div class="docs-group">
+            <div class="docs-group-title">Web UI reference</div>
+            <a href="#web-runs">Runs &amp; New</a>
+            <a href="#web-threads">Threads</a>
+            <a href="#web-understanding">Understanding page</a>
+            <a href="#web-explorer">API Explorer</a>
+            <a href="#web-settings">Settings</a>
+          </div>
+          <div class="docs-group">
+            <div class="docs-group-title">Generated code</div>
+            <a href="#codegen-generate">scout generate</a>
+            <a href="#codegen-handoff">scout handoff</a>
+            <a href="#codegen-auth">Auth-scheme coverage</a>
+          </div>
+          <div class="docs-group">
+            <div class="docs-group-title">More</div>
+            <a href="#connectors">Connectors</a>
+            <a href="#docker">Docker</a>
+            <a href="#development">Development</a>
+            <a href="#examples">Real examples</a>
+            <a href="#faq">FAQ</a>
+          </div>
+        </nav>
+      </aside>
+
+      <div class="docs-content">
+        <h1>Documentation</h1>
+        <p class="docs-lead">Everything Scout does, on all three surfaces - the CLI, the local web app, and the MCP server - documented against the real source, not paraphrased.</p>
+
+        <!-- QUICKSTART -->
+        <section class="docs-section" id="quickstart">
+          <h2>Quickstart</h2>
+          <p class="section-desc">Five minutes, install to a grounded chat. Requires Node 22+. No account, no API server to sign up for, no telemetry.</p>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>1. Install</code></div>
+            <div class="cmd-body">
+              <div class="code-block">
+                <div class="code-head"><span>bash</span><button class="copy-btn" data-copy="npm install -g @dotapk7/scoutcli"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+                <pre><span class="tok-cmd">npm</span> install -g @dotapk7/scoutcli</pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>2. Add an LLM provider</code></div>
+            <div class="cmd-body">
+              <p>Scout needs an LLM for synthesis and chat, and an embeddings model for search - OpenAI, Anthropic, Azure OpenAI, OpenRouter, or any local/self-hosted model speaking the OpenAI chat-completions protocol (Ollama, LM Studio, vLLM).</p>
+              <div class="code-block">
+                <div class="code-head"><span>bash</span><button class="copy-btn" data-copy="scout config llm add openai --api-key sk-...
+scout config llm add anthropic --api-key sk-ant-...
+scout config llm add azure-openai --base-url https://your-resource.openai.azure.com --api-key ... --chat-model gpt-4o
+scout config llm add openai-compatible --base-url http://localhost:11434/v1 --api-key ollama --chat-model llama3.1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+                <pre><span class="tok-cmd">scout</span> config llm add openai <span class="tok-flag">--api-key</span> <span class="tok-string">sk-...</span>
+<span class="tok-cmd">scout</span> config llm add anthropic <span class="tok-flag">--api-key</span> <span class="tok-string">sk-ant-...</span>
+<span class="tok-cmd">scout</span> config llm add azure-openai <span class="tok-flag">--base-url</span> <span class="tok-string">https://your-resource.openai.azure.com</span> <span class="tok-flag">--api-key</span> <span class="tok-string">...</span> <span class="tok-flag">--chat-model</span> <span class="tok-string">gpt-4o</span>
+<span class="tok-cmd">scout</span> config llm add openai-compatible <span class="tok-flag">--base-url</span> <span class="tok-string">http://localhost:11434/v1</span> <span class="tok-flag">--api-key</span> <span class="tok-string">ollama</span> <span class="tok-flag">--chat-model</span> <span class="tok-string">llama3.1</span></pre>
+              </div>
+              <p style="margin-top:12px">Anthropic has no embeddings API, so pair an Anthropic entry (<code>chat</code> role) with an OpenAI/Azure/compatible entry (<code>embedding</code> role) for Claude synthesis + non-Anthropic embeddings. <code>scout config llm list</code> shows what's configured; keys are never printed back. Skip this step and Scout falls back to <code>OPENAI_API_KEY</code> in your shell.</p>
+            </div>
+          </div>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>3. Point it at a platform</code></div>
+            <div class="cmd-body">
+              <p>The OpenAPI/Swagger spec (URL or local file), and optionally doc pages to crawl for grounded chat, following same-site links up to <code>--docs-depth</code> hops (default 2), capped at <code>--docs-max-pages</code> (default 50).</p>
+              <div class="code-block">
+                <div class="code-head"><span>bash</span><button class="copy-btn" data-copy="scout understand https://petstore3.swagger.io/api/v3/openapi.json --docs https://example.com/docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+                <pre><span class="tok-cmd">scout</span> understand https://petstore3.swagger.io/api/v3/openapi.json <span class="tok-flag">--docs</span> <span class="tok-string">https://example.com/docs</span></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>4. Use it</code></div>
+            <div class="cmd-body">
+              <p><code>scout serve</code> opens the web app at <code>http://127.0.0.1:4207</code> - Runs, New, Threads, Settings. Prefer a terminal? Same capabilities:</p>
+              <div class="code-block">
+                <div class="code-head"><span>bash</span><button class="copy-btn" data-copy="scout chat petstore-openapi-3-0 --thread &quot;auth questions&quot;
+scout generate petstore-openapi-3-0 --lang ts
+scout handoff petstore-openapi-3-0 --lang ts --thread &quot;auth questions&quot; --copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+                <pre><span class="tok-cmd">scout</span> chat petstore-openapi-3-0 <span class="tok-flag">--thread</span> <span class="tok-string">"auth questions"</span>
+<span class="tok-cmd">scout</span> generate petstore-openapi-3-0 <span class="tok-flag">--lang</span> ts
+<span class="tok-cmd">scout</span> handoff petstore-openapi-3-0 <span class="tok-flag">--lang</span> ts <span class="tok-flag">--thread</span> <span class="tok-string">"auth questions"</span> <span class="tok-flag">--copy</span></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>5. Wire it into your coding agent</code></div>
+            <div class="cmd-body">
+              <div class="code-block">
+                <div class="code-head"><span>bash</span><button class="copy-btn" data-copy="claude mcp add scout -- scout mcp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+                <pre><span class="tok-cmd">claude</span> mcp add scout -- scout mcp</pre>
+              </div>
+              <p style="margin-top:12px">See <a href="#mcp-setup" style="color:var(--color-accent-600);text-decoration:underline">MCP reference</a> for Claude Desktop, Cursor, Codex CLI, and Gemini CLI.</p>
+            </div>
+          </div>
+
+          <div class="callout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 16v-4M12 8h.01"/></svg>
+            <div><strong>Keep it current:</strong> <code>scout watch &lt;slug&gt;</code> polls a run's doc URLs and refreshes automatically when they change, archiving the previous snapshot so <code>scout diff</code> can show exactly what changed.</div>
+          </div>
+        </section>
+
+        <!-- WHY SCOUT -->
+        <section class="docs-section" id="why-scout">
+          <h2>Why Scout exists</h2>
+          <p class="section-desc">The honesty model behind every answer.</p>
+          <div class="prose">
+            <p>A generic chat model reasoning over pasted docs has no way to tell "this is definitely true" from "this sounds plausible." It invents an endpoint that doesn't exist with the same confidence as one that does. Scout uses the OpenAPI spec as ground truth for what the API can actually do, and the crawled docs as ground truth for how it's meant to be used, cross-checked against each other rather than either trusted alone.</p>
+            <p><strong>Every part of Scout is built around one constraint: never present a guess as a fact.</strong></p>
+            <ul style="color:var(--fg-muted);padding-left:20px">
+              <li>The understanding agent says "missing documentation" instead of inventing an endpoint, field, or behavior not evidenced in the spec or crawled docs.</li>
+              <li><code>scout generate</code> produces real, syntax-checked code for supported auth schemes only - anything else gets a clearly labeled stub with a stated reason.</li>
+              <li>A workflow needing a write call, when the script can only demonstrate a read, gets an explicit warning everywhere: the code, the CLI, and the handoff brief.</li>
+              <li>Every chat source is tagged: a doc excerpt with a real similarity score, a live web result with a URL, or the model's own knowledge, flagged unverified.</li>
+              <li>Folding a thread into a handoff distills only what was actually confirmed - an empty or exploratory thread yields no summary section at all.</li>
+              <li>A suspiciously thin crawled page (commonly a JS-rendered SPA a static crawl can't execute) gets a warning banner, not a silently incomplete answer.</li>
+              <li>Synthesis is capped per run to control prompt size/cost, and a run's page discloses via banner whenever a cap was actually hit.</li>
+            </ul>
+            <p>Read the full essay: <a href="https://github.com/prabhuavula7/scout/blob/main/docs/why-scout.md" target="_blank" rel="noopener" style="color:var(--color-accent-600);text-decoration:underline">docs/why-scout.md</a> on GitHub.</p>
+          </div>
+        </section>
+
+        <!-- ARCHITECTURE -->
+        <section class="docs-section" id="architecture">
+          <h2>Architecture</h2>
+          <p class="section-desc">Package layout and the four-agent pipeline.</p>
+          <div class="code-block">
+            <div class="code-head"><span>package layout</span></div>
+            <pre><span class="tok-comment">packages/agents</span>    import / documentation / understanding / chat / research agents
+<span class="tok-comment">packages/ai</span>        provider-agnostic LLM interface + tool-calling loop
+<span class="tok-comment">packages/rag</span>       chunking + citation formatting
+<span class="tok-comment">packages/store</span>     AgentStore contract + LocalFileStore
+<span class="tok-comment">packages/connectors</span> connector presets as JSON
+<span class="tok-comment">packages/cli</span>       the `scout` binary
+<span class="tok-comment">apps/web</span>           the local web app (Next.js), served by `scout serve`</pre>
+          </div>
+          <div class="prose" style="margin-top:20px">
+            <p><code>scout understand</code> runs four agents in sequence: <strong>Import</strong> parses the spec; <strong>Documentation</strong> crawls doc URLs breadth-first, chunking and embedding the result; <strong>Understanding</strong> asks an LLM to synthesize the full blueprint, grounded in the spec and crawled chunks, never training data; <strong>Chat</strong> (on demand) runs a real multi-turn tool-calling loop.</p>
+            <p><code>LocalFileStore</code> persists one directory per run under <code>~/.scout/runs/&lt;slug&gt;/</code>: flat JSON for the current snapshot, append-only JSONL for chat/audit logs, and a <code>history/</code> folder of prior snapshots whenever a refresh detects a change - this is what powers <code>scout diff</code>, no separate storage mechanism. Hybrid search (embedding cosine similarity blended with keyword relevance) runs in-memory, no database required.</p>
+            <p>A dormant hosted mode (<code>apps/api</code> + <code>apps/workers</code>, Fastify + Clerk + Postgres/pgvector + BullMQ/Redis) implements the same <code>AgentStore</code> contract over Postgres, kept working but excluded from the default build/test pipeline, for anyone who wants a multi-user deployment.</p>
+          </div>
+        </section>
+
+        <!-- CLI: IMPORT -->
+        <section class="docs-section" id="cli-import">
+          <h2>Understand &amp; import</h2>
+          <p class="section-desc">The one command that runs the whole pipeline.</p>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout understand &lt;source&gt; [options]</code></div>
+            <div class="cmd-body">
+              <p>Import an OpenAPI/Swagger spec (URL or local file), optionally crawl docs, and generate the understanding.</p>
+              <div class="opt-table-wrap"><table class="opt-table">
+                <thead><tr><th>Flag</th><th>Type / default</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td class="opt-flag">&lt;source&gt;</td><td>required</td><td>Spec URL or local file path</td></tr>
+                  <tr><td class="opt-flag">--docs &lt;url&gt;</td><td>repeatable, default <code>[]</code></td><td>Doc page(s) to crawl for grounded chat</td></tr>
+                  <tr><td class="opt-flag">--docs-depth &lt;n&gt;</td><td>default <code>2</code></td><td>Same-site link hops to follow past each <code>--docs</code> URL</td></tr>
+                  <tr><td class="opt-flag">--docs-max-pages &lt;n&gt;</td><td>default <code>50</code></td><td>Hard cap on total doc pages crawled</td></tr>
+                  <tr><td class="opt-flag">--label &lt;name&gt;</td><td>optional</td><td>Human-readable run name (defaults to spec title / connector name)</td></tr>
+                  <tr><td class="opt-flag">--connector &lt;slug&gt;</td><td>optional</td><td>A known connector slug to prefill label/docs</td></tr>
+                  <tr><td class="opt-flag">--kind &lt;kind&gt;</td><td>optional</td><td><code>openapi_url</code> | <code>openapi_raw</code> | <code>swagger_url</code></td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CLI: CHAT -->
+        <section class="docs-section" id="cli-chat">
+          <h2>Chat &amp; threads</h2>
+          <p class="section-desc">A real agentic loop with tool access, not single-shot RAG.</p>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout chat &lt;slugs&gt; [options]</code></div>
+            <div class="cmd-body">
+              <p>Chat with a platform (or several, comma-separated), grounded in its indexed docs, with tool access (search, codegen, handoff assembly) and sourced answers.</p>
+              <div class="opt-table-wrap"><table class="opt-table">
+                <thead><tr><th>Flag</th><th>Type / default</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td class="opt-flag">&lt;slugs&gt;</td><td>required</td><td>A run slug, or comma-separated slugs for a multi-platform conversation</td></tr>
+                  <tr><td class="opt-flag">--thread &lt;name&gt;</td><td>default <code>"Main"</code> (single-slug only)</td><td>Chat in a named thread, created if new. <strong>Required</strong> across multiple platforms</td></tr>
+                </tbody>
+              </table></div>
+              <div class="code-block" style="margin-top:12px">
+                <div class="code-head"><span>bash</span></div>
+                <pre><span class="tok-cmd">scout</span> chat stripe,hubspot <span class="tok-flag">--thread</span> <span class="tok-string">"cross-platform sync"</span></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CLI: CODEGEN -->
+        <section class="docs-section" id="cli-codegen">
+          <h2>Generate &amp; handoff</h2>
+          <p class="section-desc">Turn a stored blueprint into something you can run or hand to a coding agent.</p>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout generate &lt;slug&gt; [options]</code></div>
+            <div class="cmd-body">
+              <p>Generate a runnable starter script: the auth handshake plus one real read call.</p>
+              <div class="opt-table-wrap"><table class="opt-table">
+                <thead><tr><th>Flag</th><th>Type / default</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td class="opt-flag">&lt;slug&gt;</td><td>required</td><td>The run slug (see <code>scout list</code>)</td></tr>
+                  <tr><td class="opt-flag">--lang &lt;lang&gt;</td><td>default <code>ts</code></td><td><code>ts</code> or <code>py</code></td></tr>
+                  <tr><td class="opt-flag">--workflow &lt;name&gt;</td><td>optional</td><td>A <code>commonWorkflows</code> name to target (defaults to the first)</td></tr>
+                  <tr><td class="opt-flag">--out &lt;path&gt;</td><td>optional</td><td>Write to a file instead of stdout; refuses to overwrite</td></tr>
+                  <tr><td class="opt-flag">--list-workflows</td><td>boolean, default <code>false</code></td><td>Print available workflow names and exit</td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout handoff &lt;slug&gt; [options]</code></div>
+            <div class="cmd-body">
+              <p>Assemble a paste-ready integration brief for a coding agent.</p>
+              <div class="opt-table-wrap"><table class="opt-table">
+                <thead><tr><th>Flag</th><th>Type / default</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td class="opt-flag">&lt;slug&gt;</td><td>required</td><td>The run slug</td></tr>
+                  <tr><td class="opt-flag">--lang &lt;lang&gt;</td><td>default <code>ts</code></td><td><code>ts</code> or <code>py</code></td></tr>
+                  <tr><td class="opt-flag">--workflow &lt;name&gt;</td><td>optional</td><td>Target workflow (defaults to the first)</td></tr>
+                  <tr><td class="opt-flag">--out &lt;path&gt;</td><td>optional</td><td>Write to file instead of stdout</td></tr>
+                  <tr><td class="opt-flag">--copy</td><td>boolean, default <code>false</code></td><td>Copy the brief to the system clipboard instead of printing</td></tr>
+                  <tr><td class="opt-flag">--thread &lt;name&gt;</td><td>optional</td><td>Fold a named thread's findings into an "already figured out" section</td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CLI: MAINTAIN -->
+        <section class="docs-section" id="cli-maintain">
+          <h2>Maintain a run</h2>
+          <p class="section-desc">Detect drift, regenerate, poll for changes, and export.</p>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout diff &lt;slug&gt; [--json]</code></div>
+            <div class="cmd-body">
+              <p>Show what changed in a run's understanding since its last refresh.</p>
+              <div class="opt-table-wrap"><table class="opt-table">
+                <tbody>
+                  <tr><td class="opt-flag">--json</td><td>boolean, default <code>false</code></td><td>Print the raw diff as JSON instead of a summary</td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout refresh &lt;slug&gt; [options]</code></div>
+            <div class="cmd-body">
+              <p>Regenerate a run's understanding, picking up raised limits or new documentation.</p>
+              <div class="opt-table-wrap"><table class="opt-table">
+                <tbody>
+                  <tr><td class="opt-flag">--recrawl</td><td>boolean, default <code>false</code></td><td>Also re-fetch doc URLs first (needed if depth/page-cap changed)</td></tr>
+                  <tr><td class="opt-flag">--docs-depth &lt;n&gt;</td><td>optional</td><td>Override crawl depth (only with <code>--recrawl</code>)</td></tr>
+                  <tr><td class="opt-flag">--docs-max-pages &lt;n&gt;</td><td>optional</td><td>Override crawl page cap (only with <code>--recrawl</code>)</td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout watch &lt;slug&gt; [--interval &lt;seconds&gt;]</code></div>
+            <div class="cmd-body">
+              <p>Poll a run's doc URLs and refresh automatically when they change. Runs until Ctrl+C; errors if the run has no <code>--docs</code> URLs.</p>
+              <div class="opt-table-wrap"><table class="opt-table">
+                <tbody>
+                  <tr><td class="opt-flag">--interval &lt;seconds&gt;</td><td>default <code>3600</code></td><td>Polling interval</td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout export &lt;slug&gt; [--format md|json]</code></div>
+            <div class="cmd-body">
+              <p>Export a platform's understanding.</p>
+              <div class="opt-table-wrap"><table class="opt-table">
+                <tbody>
+                  <tr><td class="opt-flag">--format &lt;format&gt;</td><td>default <code>md</code></td><td><code>md</code> or <code>json</code></td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout research &lt;slug&gt;</code></div>
+            <div class="cmd-body"><p>Find related articles, tutorials, and real-world use cases (needs a Tavily or SerpApi key). No options.</p></div>
+          </div>
+        </section>
+
+        <!-- CLI: DOCS -->
+        <section class="docs-section" id="cli-docs">
+          <h2>Doc sources</h2>
+          <p class="section-desc">Ground chat and handoffs in more than a run's crawled <code>--docs</code> URLs.</p>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout docs add &lt;slug&gt; &lt;file-or-url&gt;</code></div>
+            <div class="cmd-body"><p>Attach a local file or an http(s) link to a run's grounded doc corpus. PDF, docx/xlsx/pptx, odt/odp/ods, rtf, csv, md, html, txt, json, yaml - up to 10 MB. Google Drive share links are refused with a clear reason.</p></div>
+          </div>
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout docs list &lt;slug&gt;</code></div>
+            <div class="cmd-body"><p>List every doc source (crawled, uploaded, or linked) behind a run's grounded chat.</p></div>
+          </div>
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout docs rm &lt;slug&gt; &lt;source-url&gt;</code></div>
+            <div class="cmd-body"><p>Remove a doc source, and every chunk it produced, from a run.</p></div>
+          </div>
+        </section>
+
+        <!-- CLI: CONFIG -->
+        <section class="docs-section" id="cli-config">
+          <h2>Connectors &amp; config</h2>
+          <p class="section-desc">Provider setup and platform presets.</p>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout connectors list</code> / <code>scout connectors add &lt;file&gt;</code></div>
+            <div class="cmd-body"><p>List bundled + user-added connector presets, or drop a new JSON preset into <code>~/.scout/connectors/</code> (overrides a bundled preset by slug, or adds a new one).</p></div>
+          </div>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout config llm add &lt;kind&gt; [options]</code></div>
+            <div class="cmd-body">
+              <p>Add/update an LLM provider entry. <code>kind</code>: <code>openai</code> | <code>anthropic</code> | <code>azure-openai</code> | <code>openrouter</code> | <code>openai-compatible</code>.</p>
+              <div class="opt-table-wrap"><table class="opt-table">
+                <thead><tr><th>Flag</th><th>Type / default</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td class="opt-flag">--api-key &lt;key&gt;</td><td>required unless <code>--id</code> exists</td><td>Provider API key (or placeholder for keyless local endpoints)</td></tr>
+                  <tr><td class="opt-flag">--id &lt;id&gt;</td><td>optional, random default</td><td>Stable id - updates in place if it already exists</td></tr>
+                  <tr><td class="opt-flag">--label &lt;label&gt;</td><td>optional</td><td>Name shown in the web viewer</td></tr>
+                  <tr><td class="opt-flag">--base-url &lt;url&gt;</td><td>required for <code>openai-compatible</code>/<code>azure-openai</code></td><td>Endpoint base URL</td></tr>
+                  <tr><td class="opt-flag">--chat-model &lt;model&gt;</td><td>optional</td><td>Chat model id / Azure deployment name</td></tr>
+                  <tr><td class="opt-flag">--embedding-model &lt;model&gt;</td><td>optional</td><td>Embedding model id / Azure deployment name</td></tr>
+                  <tr><td class="opt-flag">--azure-api-version &lt;v&gt;</td><td>default <code>2024-10-21</code></td><td>Azure OpenAI only</td></tr>
+                  <tr><td class="opt-flag">--roles &lt;roles&gt;</td><td>default <code>chat,embedding</code></td><td>Comma-separated: <code>chat</code>, <code>embedding</code>, or both</td></tr>
+                  <tr><td class="opt-flag">--priority &lt;n&gt;</td><td>default <code>0</code></td><td>Lower tried first within a role</td></tr>
+                  <tr><td class="opt-flag">--disabled</td><td>boolean, default <code>false</code></td><td>Add without enabling</td></tr>
+                </tbody>
+              </table></div>
+              <p style="margin-top:12px">Plus <code>scout config llm enable/disable/remove/list &lt;id&gt;</code>, and the same shape for <code>scout config search add &lt;tavily|serpapi&gt;</code> (used by <code>scout research</code>). <code>scout config set &lt;key&gt; &lt;value&gt;</code> is a legacy single-key shorthand; <code>scout config get</code> prints masked config as JSON.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- CLI: RUNS -->
+        <section class="docs-section" id="cli-runs">
+          <h2>Runs &amp; MCP server</h2>
+          <p class="section-desc">List, delete, serve, and expose runs.</p>
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout list</code></div>
+            <div class="cmd-body"><p>List every platform you've run Scout against, most recently updated first. No options.</p></div>
+          </div>
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout rm &lt;slug&gt; [-y, --yes]</code></div>
+            <div class="cmd-body"><p>Delete a run and everything under it (understanding, chat history, doc chunks). <code>-y</code>/<code>--yes</code> skips the confirmation prompt.</p></div>
+          </div>
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout serve [options]</code></div>
+            <div class="cmd-body">
+              <p>Start the local viewer, 127.0.0.1 only by default, no login.</p>
+              <div class="opt-table-wrap"><table class="opt-table">
+                <tbody>
+                  <tr><td class="opt-flag">--port &lt;port&gt;</td><td>default <code>4207</code></td><td>Port to listen on</td></tr>
+                  <tr><td class="opt-flag">--host &lt;host&gt;</td><td>default <code>127.0.0.1</code></td><td>Bind address - use <code>0.0.0.0</code> for Docker/remote access</td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+          <div class="cmd-block">
+            <div class="cmd-header"><code>scout mcp</code></div>
+            <div class="cmd-body"><p>Run Scout as a stdio MCP server. No arguments - see the <a href="#mcp-setup" style="color:var(--color-accent-600);text-decoration:underline">MCP reference</a> below.</p></div>
+          </div>
+        </section>
+
+        <!-- MCP SETUP -->
+        <section class="docs-section" id="mcp-setup">
+          <h2>MCP reference</h2>
+          <p class="section-desc"><code>scout mcp</code> runs a standard stdio MCP server (built on <code>@modelcontextprotocol/sdk</code>). Every tool is a thin wrapper around the same agent/store functions the CLI calls - there's no separate implementation to fall out of sync.</p>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>Claude Code</code></div>
+            <div class="cmd-body">
+              <div class="code-block">
+                <div class="code-head"><span>bash</span><button class="copy-btn" data-copy="claude mcp add scout -- scout mcp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+                <pre><span class="tok-cmd">claude</span> mcp add scout -- scout mcp</pre>
+              </div>
+              <p style="margin-top:10px">or in a project's <code>.mcp.json</code>:</p>
+              <div class="code-block">
+                <div class="code-head"><span>json</span></div>
+                <pre>{ "mcpServers": { "scout": { "command": "scout", "args": ["mcp"] } } }</pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>Claude Desktop · Cursor · Gemini CLI</code></div>
+            <div class="cmd-body">
+              <p><code>claude_desktop_config.json</code>, <code>.cursor/mcp.json</code>, or <code>~/.gemini/settings.json</code>:</p>
+              <div class="code-block">
+                <div class="code-head"><span>json</span></div>
+                <pre>{ "mcpServers": { "scout": { "command": "scout", "args": ["mcp"] } } }</pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="cmd-block">
+            <div class="cmd-header"><code>Codex CLI</code></div>
+            <div class="cmd-body">
+              <p><code>~/.codex/config.toml</code>:</p>
+              <div class="code-block">
+                <div class="code-head"><span>toml</span></div>
+                <pre>[mcp_servers.scout]
+command = "scout"
+args = ["mcp"]</pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 16v-4M12 8h.01"/></svg>
+            <div>Running from source instead of a global install? Swap <code>"scout"</code> for <code>"node"</code> and add the built entry point as the first arg: <code>["/path/to/scout/packages/cli/dist/index.js", "mcp"]</code>.</div>
+          </div>
+        </section>
+
+        <!-- MCP TOOLS -->
+        <section class="docs-section" id="mcp-tools">
+          <h2>The twelve tools</h2>
+          <p class="section-desc">Same capabilities as the CLI and web app.</p>
+          <div class="tool-grid">
+            <div class="tool-item"><code>understand_platform</code><p>Import a spec (URL), crawl doc pages, generate the full understanding. Returns the slug every other tool needs.</p></div>
+            <div class="tool-item"><code>ask_platform</code><p>Ask a grounded question, scoped to a thread (default <code>main</code>). Agentic: a real multi-turn tool-calling loop that can call <code>search_docs</code>, search the live web, generate starter code, or assemble a handoff brief. Pass <code>slugs</code> (2+) plus <code>title</code> to ask across multiple platforms at once.</p></div>
+            <div class="tool-item"><code>list_platforms</code><p>List every run Scout has already analyzed, with slug and status.</p></div>
+            <div class="tool-item"><code>list_connectors</code><p>List known connector presets.</p></div>
+            <div class="tool-item"><code>refresh_platform</code><p>Regenerate a run's understanding. <code>recrawl: true</code> also re-fetches doc URLs first.</p></div>
+            <div class="tool-item"><code>diff_platform</code><p>Drift detection: what changed in a run's understanding since its last refresh.</p></div>
+            <div class="tool-item"><code>generate_platform</code><p>Generate a real, syntax-checked starter script (or an honest stub) from a run's blueprint.</p></div>
+            <div class="tool-item"><code>handoff_platform</code><p>Assemble a paste-ready integration brief. Pass <code>thread</code> to fold that thread's conversation in as a distilled summary.</p></div>
+            <div class="tool-item"><code>attach_document_platform</code><p>Attach a local file (readable from where <code>scout mcp</code> runs) or an http(s) link to a run's grounded doc corpus. Pass exactly one of <code>filePath</code> or <code>url</code>.</p></div>
+            <div class="tool-item"><code>export_platform</code><p>Export the full understanding as Markdown or JSON.</p></div>
+            <div class="tool-item"><code>research_platform</code><p>Find related articles, tutorials, and real-world use cases via a configured web search provider.</p></div>
+            <div class="tool-item"><code>remove_platform</code><p>Delete a run and everything under it. Requires <code>confirm: true</code>.</p></div>
+          </div>
+        </section>
+
+        <!-- MCP WORKFLOW -->
+        <section class="docs-section" id="mcp-workflow">
+          <h2>A real agent workflow</h2>
+          <p class="section-desc">A developer working in any MCP-speaking coding agent, with Scout already added as an MCP server:</p>
+          <ol style="color:var(--fg-muted);padding-left:20px;font-size:0.92rem">
+            <li style="margin-bottom:10px">"Import the Stripe API and tell me how subscriptions work." → <code>understand_platform</code> runs the full pipeline, <code>ask_platform</code> answers with real citations.</li>
+            <li style="margin-bottom:10px">"Give me a starter script for creating a subscription." → <code>generate_platform</code> returns real, syntax-checked TypeScript, or an honest stub.</li>
+            <li style="margin-bottom:10px">"Prep a handoff brief for the invoicing workflow, and fold in what we just discussed." → <code>handoff_platform</code> with <code>thread</code> set.</li>
+            <li style="margin-bottom:10px">Three weeks later: "Has anything changed since we last looked at this?" → <code>diff_platform</code> reports exactly what's different.</li>
+            <li>"Now that Stripe's imported, how would it talk to the HubSpot integration we already have?" → <code>ask_platform</code> with <code>slugs: ["stripe", "hubspot-contacts"]</code> merges and cites both platforms in one answer.</li>
+          </ol>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin-top:16px">None of this requires running a single <code>scout</code> command by hand - the agent drives the whole pipeline through MCP.</p>
+        </section>
+
+        <!-- WEB UI: RUNS -->
+        <section class="docs-section" id="web-runs">
+          <h2>Web UI reference</h2>
+          <p class="section-desc"><code>scout serve</code> opens the viewer at <code>http://127.0.0.1:4207</code>. A persistent sidebar (Runs / New / Threads / Settings) collapses to icon-only, with state persisted to localStorage.</p>
+          <h3 style="font-size:1.05rem;margin:0 0 10px">Runs &amp; New</h3>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:0 0 16px">Every platform you've pointed Scout at, most recently updated first, with status and a delete action. The <strong>New</strong> tab runs the identical pipeline <code>scout understand</code> does - fire-and-poll: the request returns immediately and the run's page polls live - so a UI-only user never has to touch the terminal after the initial install.</p>
+          <div class="browser-frame">
+            <div class="browser-chrome"><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span></div>
+            <img src="assets/img/runs-list.png" alt="Scout's Runs list" loading="lazy" data-fade  width="1400" height="900" />
+          </div>
+        </section>
+
+        <!-- WEB UI: THREADS -->
+        <section class="docs-section" id="web-threads">
+          <h3 style="font-size:1.3rem;font-family:var(--font-serif);font-weight:500;margin:0 0 6px">Threads</h3>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:0 0 16px">A flat, Claude/ChatGPT-style thread list across every platform imported, not grouped by run. Create, rename, delete, filter by platform. A thread can span two or more platforms at once - <code>search_docs</code> merges and re-ranks results and tags every citation by platform. Panes are independently draggable and resizable.</p>
+          <div class="compare-wrap" style="margin-bottom:0">
+            <div class="compare" data-compare tabindex="0" role="slider" aria-label="Drag to compare Threads in dark and light mode" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+              <img class="compare-base" src="assets/img/threads-dark.png" alt="Threads tab, dark mode" loading="lazy" data-fade  draggable="false" width="1280" height="720" />
+              <div class="compare-overlay">
+                <img src="assets/img/threads-light.png" alt="Threads tab, light mode" loading="lazy" data-fade  draggable="false" width="1280" height="720" />
+              </div>
+              <span class="compare-tag compare-tag-left">Dark</span>
+              <span class="compare-tag compare-tag-right">Light</span>
+              <div class="compare-handle">
+                <span class="compare-grip">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 6-6 6 6 6M15 6l6 6-6 6"/></svg>
+                </span>
+              </div>
+            </div>
+            <div class="gallery-caption compare-caption"><strong>Drag to compare</strong>A thread spanning Stripe and HubSpot, same conversation in both themes.</div>
+          </div>
+        </section>
+
+        <!-- WEB UI: UNDERSTANDING -->
+        <section class="docs-section" id="web-understanding">
+          <h3 style="font-size:1.3rem;font-family:var(--font-serif);font-weight:500;margin:0 0 6px">Understanding page</h3>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:0 0 16px">Summary, table of contents, architecture, auth flow, data model, a real Mermaid entity-relationship diagram, common workflows, pitfalls, security observations, and documentation gaps - plus "Starter code" and "IDE handoff" sections and an "Attach a document" control, all sharing the exact functions the CLI uses.</p>
+          <div class="gallery" style="margin-bottom:0">
+            <div class="gallery-item">
+              <img src="assets/img/understanding-summary.png" alt="Understanding summary page" loading="lazy" data-fade  width="1400" height="900" />
+              <div class="gallery-caption"><strong>Summary + TOC</strong>Full understanding, cited throughout.</div>
+            </div>
+            <div class="gallery-item">
+              <img src="assets/img/understanding-entity-diagram.png" alt="Entity relationship diagram" loading="lazy" data-fade  width="1400" height="900" />
+              <div class="gallery-caption"><strong>Entity diagram</strong>Real Mermaid diagram from the imported spec.</div>
+            </div>
+            <div class="gallery-item">
+              <img src="assets/img/starter-code.png" alt="Starter code with honest warning" loading="lazy" data-fade  width="1400" height="900" />
+              <div class="gallery-caption"><strong>Starter code</strong>An honest warning instead of fabricated code.</div>
+            </div>
+            <div class="gallery-item">
+              <img src="assets/img/ide-handoff.png" alt="IDE handoff section" loading="lazy" data-fade  width="1400" height="900" />
+              <div class="gallery-caption"><strong>IDE handoff</strong>A thread's findings folded into the brief.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- WEB UI: EXPLORER -->
+        <section class="docs-section" id="web-explorer">
+          <h3 style="font-size:1.3rem;font-family:var(--font-serif);font-weight:500;margin:0 0 6px">API Explorer</h3>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:0 0 16px">Every endpoint the spec declares, method-color-coded, searchable - no scrolling through YAML. Per-endpoint code snippets reflect the run's real detected auth scheme, never a hardcoded default.</p>
+          <div class="browser-frame">
+            <div class="browser-chrome"><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span></div>
+            <img src="assets/img/api-explorer.png" alt="API Explorer" loading="lazy" data-fade  width="1400" height="900" />
+          </div>
+        </section>
+
+        <!-- WEB UI: SETTINGS -->
+        <section class="docs-section" id="web-settings">
+          <h3 style="font-size:1.3rem;font-family:var(--font-serif);font-weight:500;margin:0 0 6px">Settings</h3>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:0 0 16px">Configure LLM and search providers once - the same <code>~/.scout/config.json</code> the CLI's <code>scout config</code> reads and writes. Keys are never shown again after entry, and an empty-state banner walks through setup when nothing's configured yet.</p>
+          <div class="browser-frame">
+            <div class="browser-chrome"><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span></div>
+            <img src="assets/img/settings.png" alt="Settings page" loading="lazy" data-fade  width="1400" height="1033" />
+          </div>
+        </section>
+
+        <!-- CODEGEN GENERATE -->
+        <section class="docs-section" id="codegen-generate">
+          <h2>Generated code</h2>
+          <p class="section-desc">Two commands, one shared code generator - the script in a handoff brief is never different from what <code>scout generate</code> produces alone.</p>
+          <h3 style="font-size:1.05rem;margin:0 0 10px"><code>scout generate</code></h3>
+          <p style="color:var(--fg-muted);font-size:0.9rem">Produces a runnable starter script: the auth handshake, plus one real, working call against a read (GET) endpoint. Real output is syntax-checked (<code>node --check</code> for TypeScript, <code>python3 -m py_compile</code> for Python) before it's returned - that proves the code parses, not that the API call succeeds against a live account.</p>
+          <p style="color:var(--fg-muted);font-size:0.9rem">Field names from the real response schema are normalized into valid identifiers. Required path parameters become explicit placeholders, never invented example values.</p>
+        </section>
+
+        <section class="docs-section" id="codegen-handoff">
+          <h3 style="font-size:1.3rem;font-family:var(--font-serif);font-weight:500;margin:0 0 10px"><code>scout handoff</code></h3>
+          <p style="color:var(--fg-muted);font-size:0.9rem">Bundles the task/workflow steps, auth flow, the exact starter script, its <code>.env.example</code>, the specific endpoint used, and real pitfalls/security observations into one Markdown brief, paste-ready for Claude Code, Cursor, or any coding agent. <code>--thread &lt;name&gt;</code> makes one extra LLM call to distill that thread's history into an "Already figured out in chat" section above the Task section - not a raw transcript. Free text is sanitized against markdown fence-break injection, since this brief is designed to be pasted directly into an agentic tool.</p>
+        </section>
+
+        <section class="docs-section" id="codegen-auth">
+          <h3 style="font-size:1.3rem;font-family:var(--font-serif);font-weight:500;margin:0 0 14px">Auth-scheme coverage, honestly</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Auth scheme</th><th>Real template?</th><th>Otherwise</th></tr></thead>
+              <tbody>
+                <tr><td>API key in a header</td><td><span class="badge-pill yes">Yes</span></td><td> - </td></tr>
+                <tr><td>Bearer token</td><td><span class="badge-pill yes">Yes</span></td><td> - </td></tr>
+                <tr><td>API key as query param</td><td><span class="badge-pill yes">Yes</span></td><td> - </td></tr>
+                <tr><td>OAuth2, Basic, no endpoints, write-only workflows</td><td><span class="badge-pill no">No</span></td><td>Honest, clearly labeled stub with a stated reason (e.g. <code>unsupported-auth-scheme:oauth2</code>)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p style="color:var(--fg-muted);font-size:0.88rem;margin-top:14px">This started at two schemes and grew to three after real-world testing against Stripe/GitHub/HubSpot showed the two-scheme version missed HubSpot's query-param auth entirely - the taxonomy expands based on what's actually blocking real runs.</p>
+        </section>
+
+        <!-- CONNECTORS -->
+        <section class="docs-section" id="connectors">
+          <h2>Connectors</h2>
+          <p class="section-desc">A connector is a JSON preset, not code - it maps a slug to a suggested docs URL and default auth scheme, saving a search for "where's the OpenAPI spec." It doesn't gate what Scout can import: the pipeline works against any valid spec, connector or not.</p>
+          <div class="code-block">
+            <div class="code-head"><span>bash</span></div>
+            <pre><span class="tok-cmd">scout</span> connectors list
+<span class="tok-cmd">scout</span> connectors add acme.json</pre>
+          </div>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:16px 0">18 connectors are declared today; 2 (Contentful, Bynder) are verified end-to-end. Marking <code>implemented: true</code> requires actually running <code>scout understand</code> against the platform and checking the output.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Slug</th><th>Category</th><th>Verified</th></tr></thead>
+              <tbody>
+                <tr><td>contentful</td><td>cms</td><td><span class="badge-pill yes">Yes</span></td></tr>
+                <tr><td>bynder</td><td>dam</td><td><span class="badge-pill yes">Yes</span></td></tr>
+                <tr><td>aem, sanity, wordpress</td><td>cms</td><td><span class="badge-pill no">Not yet</span></td></tr>
+                <tr><td>cloudflare-images, cloudinary</td><td>dam</td><td><span class="badge-pill no">Not yet</span></td></tr>
+                <tr><td>confluence, notion</td><td>knowledge</td><td><span class="badge-pill no">Not yet</span></td></tr>
+                <tr><td>dropbox, google-drive, sharepoint</td><td>storage</td><td><span class="badge-pill no">Not yet</span></td></tr>
+                <tr><td>hubspot, salesforce</td><td>crm</td><td><span class="badge-pill no">Not yet</span></td></tr>
+                <tr><td>asana, jira, monday</td><td>workflow</td><td><span class="badge-pill no">Not yet</span></td></tr>
+                <tr><td>slack</td><td>communication</td><td><span class="badge-pill no">Not yet</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p style="color:var(--fg-muted);font-size:0.88rem;margin-top:14px">Bundled connectors live in <code>packages/connectors/registry/*.json</code>. See <a href="https://github.com/prabhuavula7/scout/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener" style="color:var(--color-accent-600);text-decoration:underline">CONTRIBUTING.md</a> to add one.</p>
+        </section>
+
+        <!-- DOCKER -->
+        <section class="docs-section" id="docker">
+          <h2>Docker</h2>
+          <p class="section-desc">For anyone who'd rather not install Node/pnpm at all.</p>
+          <div class="code-block">
+            <div class="code-head"><span>bash</span><button class="copy-btn" data-copy="git clone https://github.com/prabhuavula7/scout.git
+cd scout
+docker compose up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+            <pre><span class="tok-cmd">git</span> clone https://github.com/prabhuavula7/scout.git
+<span class="tok-cmd">cd</span> scout
+<span class="tok-cmd">docker</span> compose up</pre>
+          </div>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:16px 0">Open <code>http://localhost:4207</code> - the same web app a native <code>scout serve</code> gives you. Runs and provider config persist in a named Docker volume (<code>scout-data</code>) across restarts and rebuilds.</p>
+          <div class="code-block">
+            <div class="code-head"><span>bash - skip the Settings tab</span></div>
+            <pre>OPENAI_API_KEY=sk-... TAVILY_API_KEY=tvly-... docker compose up</pre>
+          </div>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:16px 0">or a <code>.env</code> file next to <code>docker-compose.yml</code> - Compose reads it automatically. The CLI works identically through the container:</p>
+          <div class="code-block">
+            <div class="code-head"><span>bash</span></div>
+            <pre><span class="tok-cmd">docker</span> compose exec scout scout understand https://petstore3.swagger.io/api/v3/openapi.json <span class="tok-flag">--docs</span> <span class="tok-string">https://example.com/docs</span>
+<span class="tok-cmd">docker</span> compose exec scout scout list</pre>
+          </div>
+          <p style="color:var(--fg-muted);font-size:0.85rem;margin-top:14px">There's no published image on Docker Hub/GHCR yet - <code>build: .</code> always builds locally. <code>docker compose up --build</code> rebuilds after pulling new commits.</p>
+        </section>
+
+        <!-- DEVELOPMENT -->
+        <section class="docs-section" id="development">
+          <h2>Local development</h2>
+          <div class="code-block">
+            <div class="code-head"><span>bash</span></div>
+            <pre><span class="tok-cmd">pnpm</span> install
+<span class="tok-cmd">pnpm</span> build           <span class="tok-comment"># builds everything except the dormant hosted mode</span>
+<span class="tok-cmd">pnpm</span> --filter @dotapk7/scoutcli dev -- understand <span class="tok-string">&lt;spec-url&gt;</span> <span class="tok-flag">--docs</span> <span class="tok-string">&lt;docs-url&gt;</span>
+<span class="tok-cmd">pnpm</span> --filter @dotapk7/scoutcli build <span class="tok-comment">&&</span> node packages/cli/dist/index.js serve</pre>
+          </div>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:16px 0"><code>pnpm typecheck</code> / <code>pnpm lint</code> / <code>pnpm test</code> cover the default CLI + local viewer path, including <code>apps/web</code>'s own Vitest + React Testing Library suite. <code>pnpm hosted:build</code> / <code>pnpm hosted:dev</code> cover the dormant hosted mode.</p>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:0 0 16px">Iterate on the UI directly against real <code>~/.scout/runs/</code> data without rebuilding the CLI's bundled viewer:</p>
+          <div class="code-block">
+            <div class="code-head"><span>bash</span></div>
+            <pre><span class="tok-cmd">pnpm</span> --filter @scout/web dev  <span class="tok-comment"># http://localhost:3000</span></pre>
+          </div>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:16px 0">Working from source, Scout falls back to <code>OPENAI_API_KEY</code> in your shell if nothing's configured yet - covers OpenAI only; every other provider needs <code>scout config llm add</code>.</p>
+          <p style="color:var(--fg-muted);font-size:0.9rem">See <a href="https://github.com/prabhuavula7/scout/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener" style="color:var(--color-accent-600);text-decoration:underline">CONTRIBUTING.md</a> for adding connectors, LLM/search providers, or import kinds.</p>
+        </section>
+
+        <!-- EXAMPLES -->
+        <section class="docs-section" id="examples">
+          <h2>Real examples</h2>
+          <p class="section-desc">Three platforms verified end-to-end against real, public specs and docs - real output, not illustrative copy.</p>
+
+          <h3 style="font-size:1.05rem;margin:0 0 8px">Stripe</h3>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:0 0 12px">Asked "How do I authenticate with the Stripe API?" - four real citations straight from the crawled docs. <code>scout generate stripe --lang ts</code> correctly refuses to fabricate code: Stripe's real scheme is HTTP Basic, which v1's codegen doesn't template, so it returns a clearly labeled stub.</p>
+
+          <h3 style="font-size:1.05rem;margin:16px 0 8px">HubSpot (Contacts)</h3>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:0 0 12px">Uses <code>api_key_query</code> auth, one of the three v1 supports with a real template - produces real, <code>node --check</code>-validated TypeScript. The synthesized blueprint's pitfalls section pulled 25+ real, specific constraints (batch limits, idempotency-key pruning, lifecycle-stage ordering) straight from HubSpot's crawled docs, not generic advice.</p>
+
+          <h3 style="font-size:1.05rem;margin:16px 0 8px">GitHub (REST API)</h3>
+          <p style="color:var(--fg-muted);font-size:0.9rem;margin:0 0 20px">Public REST endpoints declare a <code>none</code> auth scheme, distinct from token-gated ones. Scout correctly separated the two and stubbed honestly rather than guessing a default header GitHub never asked for.</p>
+
+          <div class="callout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 16v-4M12 8h.01"/></svg>
+            <div>Try it yourself with other public specs - Twilio, DigitalOcean, Slack - verified reachable in <a href="https://github.com/prabhuavula7/scout/blob/main/docs/examples.md" target="_blank" rel="noopener" style="color:var(--color-accent-600);text-decoration:underline">docs/examples.md</a> on GitHub.</div>
+          </div>
+        </section>
+
+        <!-- FAQ -->
+        <section class="docs-section" id="faq">
+          <h2>FAQ</h2>
+
+          <div class="faq-list">
+          <details class="faq-item" name="faq" open>
+            <summary>Does Scout send my data anywhere?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
+            <div class="faq-answer"><p>No hosted backend, no accounts, no telemetry. The only network calls are the ones you configure: the platform's spec/docs URLs, your chosen LLM provider, and your chosen search provider (if enabled). Everything else stays under <code>~/.scout/</code>.</p></div>
+          </details>
+          <details class="faq-item" name="faq">
+            <summary>Why isn't this just ChatGPT with the docs pasted in?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
+            <div class="faq-answer"><p>A generic chat model has no way to tell "this is definitely true" from "this sounds plausible." Scout cross-checks the OpenAPI spec against crawled docs and is instructed to say "missing documentation" instead of guessing, with real tool access to re-search mid-conversation.</p></div>
+          </details>
+          <details class="faq-item" name="faq">
+            <summary>Why isn't this Swagger UI?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
+            <div class="faq-answer"><p>Swagger UI renders a spec. It doesn't crawl docs, synthesize an architecture overview, answer questions, generate starter code, or expose an MCP tool. Scout's primary output is an understanding - a spec viewer is a side effect of already having imported the endpoints.</p></div>
+          </details>
+          <details class="faq-item" name="faq">
+            <summary>Does this cost money to run?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
+            <div class="faq-answer"><p>Scout itself is free and open source. You pay whatever your configured LLM/search provider charges. <code>scout understand</code> prints a size estimate before starting, and local models via Ollama/LM Studio work for zero marginal cost.</p></div>
+          </details>
+          <details class="faq-item" name="faq">
+            <summary>Does it work with local/open-source models?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
+            <div class="faq-answer"><p>Yes - anything speaking the OpenAI chat-completions wire protocol works via <code>scout config llm add openai-compatible --base-url &lt;endpoint&gt;</code>: Ollama, LM Studio, vLLM, or a hosted OpenRouter model.</p></div>
+          </details>
+          <details class="faq-item" name="faq">
+            <summary>What happens to my API keys?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
+            <div class="faq-answer"><p>Stored in <code>~/.scout/config.json</code> on your machine, never printed back by <code>scout config llm list</code>, never transmitted anywhere except directly to the provider you configured.</p></div>
+          </details>
+          <details class="faq-item" name="faq">
+            <summary>Can multiple people on my team share runs?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
+            <div class="faq-answer"><p>Not today - <code>LocalFileStore</code> is single-machine by design. A dormant hosted mode (<code>apps/api</code>, <code>apps/workers</code>, Postgres-backed, multi-user) exists in the repo for anyone who wants a shared deployment.</p></div>
+          </details>
+          <details class="faq-item" name="faq">
+            <summary>What if the platform doesn't have a public OpenAPI spec?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
+            <div class="faq-answer"><p>Scout needs one - that's the ground-truth contract the honesty model is built on. Many platforms without an advertised spec still have one (check <code>/openapi.json</code>, <code>/swagger.json</code>). If a platform genuinely has none, Scout isn't the right tool yet.</p></div>
+          </details>
+          <details class="faq-item" name="faq">
+            <summary>Is the generated code safe to run against a live API?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
+            <div class="faq-answer"><p>It's syntax-checked, not execution-tested. "Syntax validated" means it parses, not that the call succeeds or matches your account's permissions. Treat it as a correct starting point, not a finished integration.</p></div>
+          </details>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <span>© 2026 Scout. Built by Prabhu Avula.</span>
+        <span class="brand"><a href="https://github.com/prabhuavula7/scout" target="_blank" rel="noopener" style="text-decoration:none">github.com/prabhuavula7/scout</a></span>
+      </div>
+    </div>
+  </footer>
+
+  <button type="button" class="scroll-top-btn" data-scroll-top aria-label="Scroll to top">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5M5 12l7-7 7 7"/></svg>
+  </button>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

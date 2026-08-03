@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Scout - Understand any enterprise platform in minutes</title>
+  <meta name="description" content="Point Scout at a platform's OpenAPI spec and docs. Get a cited, browsable integration blueprint and a real threaded chat assistant, in a local web app, in minutes. Local-first, open source, MIT licensed." />
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" />
+  <meta property="og:title" content="Scout - Understand any enterprise platform in minutes" />
+  <meta property="og:description" content="Point Scout at an OpenAPI spec and docs. Get a cited integration blueprint, a real chat assistant, and MCP tools for your coding agent - all local, no telemetry." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#161412" />
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem("theme");
+        var theme = stored === "light" || stored === "dark"
+          ? stored
+          : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        if (theme === "dark") document.documentElement.classList.add("dark");
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+    <div class="site-nav">
+      <a class="brand" href="index.html">
+        <svg class="brand-mark" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="15" fill="var(--color-accent-500)"/>
+          <path d="M21.5 10.5 17.8 17.8 10.5 21.5 14.2 14.2 21.5 10.5Z" fill="#FFFAF5"/>
+          <circle cx="16" cy="16" r="2" fill="var(--color-accent-500)"/>
+          <circle cx="16" cy="16" r="1" fill="#FFFAF5"/>
+        </svg>
+        Scout
+      </a>
+      <nav class="nav-links" data-nav-links>
+        <a class="nav-link" href="index.html#features">Features</a>
+        <a class="nav-link" href="index.html#examples">Examples</a>
+        <a class="nav-link" href="index.html#compare">Compare</a>
+        <a class="nav-link" href="index.html#quickstart">Quickstart</a>
+        <a class="nav-link active" href="docs.html">Docs</a>
+        <a class="nav-link" href="https://github.com/prabhuavula7/scout" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="icon-btn" data-theme-toggle aria-label="Toggle theme"></button>
+        <a class="btn btn-secondary" href="https://github.com/prabhuavula7/scout" target="_blank" rel="noopener" style="display:none" data-desktop-only></a>
+        <button class="icon-btn menu-toggle" data-menu-toggle aria-label="Toggle menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </div>
+    </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true">
+        <div class="aether-a"></div>
+        <div class="aether-b"></div>
+        <div class="aether-c"></div>
+      </div>
+      <div class="container">
+        <div class="hero-inner">
+          <span class="eyebrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            Local-first · MIT licensed · No telemetry
+          </span>
+          <h1>Understand any enterprise platform <em>in minutes</em>, not the first afternoon of a new integration.</h1>
+          <p class="lead">
+            Point Scout at a platform's OpenAPI spec and docs. Get a cited, browsable integration blueprint and a real
+            threaded chat assistant, in a local web app. It also ships an equally capable CLI and MCP server, so any
+            MCP-speaking coding agent (Claude Code, Cursor, Codex, Gemini CLI, and more) pulls the same grounded
+            understanding straight into its own context.
+          </p>
+          <div class="hero-ctas">
+            <div class="install-copy">
+              <span><span class="prompt">$</span> npm install -g @dotapk7/scoutcli</span>
+              <button type="button" data-copy="npm install -g @dotapk7/scoutcli" aria-label="Copy install command">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="hero-ctas" style="margin-top:-16px">
+            <a class="btn btn-primary" href="docs.html#quickstart">
+              Read the quickstart
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+            <a class="btn btn-secondary" href="https://github.com/prabhuavula7/scout" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.78-.25.78-.55v-2.17c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.29-1.69-1.29-1.69-1.05-.72.08-.7.08-.7 1.17.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.07.78 2.16v3.2c0 .3.21.66.79.55A10.52 10.52 0 0 0 23.5 12c0-6.27-5.23-11.5-11.5-11.5Z"/></svg>
+              View on GitHub
+            </a>
+          </div>
+          <div class="hero-meta">
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              Runs entirely on your machine
+            </span>
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
+              MIT license
+            </span>
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              No account, no hosted backend
+            </span>
+          </div>
+        </div>
+
+        <div class="browser-frame">
+          <div class="browser-chrome">
+            <span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span>
+          </div>
+          <img src="assets/img/runs-list.png" alt="Scout's Runs list: every platform you've pointed it at, with a collapsible sidebar and the Threads tab" loading="eager"  width="1400" height="900" />
+        </div>
+      </div>
+    </section>
+
+    <!-- PROBLEM -->
+    <section id="why">
+      <div class="container-narrow">
+        <div class="section-head reveal">
+          <p class="kicker">The problem</p>
+          <h2>Coding agents guess at API shapes. Scout gives them ground truth instead.</h2>
+        </div>
+        <div class="prose reveal">
+          <p>
+            You open a platform's docs to build an integration. Forty tabs in, you still don't know how auth actually
+            works, what the core objects are, or which of six similarly-named endpoints does what you need. You paste
+            a docs URL into your coding agent and ask it to wire up the integration. It writes confident code against an
+            endpoint that doesn't exist, because it's pattern-matching against every payments API it saw in training,
+            not reading this platform's actual docs.
+          </p>
+          <p>
+            That gap, between what a coding agent assumes and what a platform's docs actually say, is where
+            integrations break. Scout closes it. It reads the OpenAPI spec as ground truth for what the API can do,
+            crawls the docs as ground truth for how it's meant to be used, and cross-checks one against the other.
+            <strong> When something isn't evidenced in either, it says so instead of inventing it.</strong>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHO IT'S FOR -->
+    <section id="who">
+      <div class="container">
+        <div class="section-head center reveal">
+          <p class="kicker">Who it's for</p>
+          <h2>Built for the people who live in third-party APIs</h2>
+          <p>Anyone integrating with a platform regularly, not just once, plus the people who manage and greenlight that work.</p>
+        </div>
+        <div class="persona-grid">
+          <div class="persona-card reveal" data-reveal-group="persona">
+            <div class="persona-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>
+            <div>
+              <h3>Forward Deployed Engineers</h3>
+              <p>Standing up a bespoke integration on-site, fast. Get a grounded understanding of the customer's platform before you write a line of code.</p>
+            </div>
+          </div>
+          <div class="persona-card reveal" data-reveal-group="persona">
+            <div class="persona-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg></div>
+            <div>
+              <h3>Integration &amp; platform engineers</h3>
+              <p>Third-party APIs are the job, not a side quest. Keep a living, cited understanding of every platform your team integrates with, refreshed as docs change.</p>
+            </div>
+          </div>
+          <div class="persona-card reveal" data-reveal-group="persona">
+            <div class="persona-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="m15.5 8.5-2.4 5.6-5.6 2.4 2.4-5.6 5.6-2.4Z"/></svg></div>
+            <div>
+              <h3>Solutions architects</h3>
+              <p>Evaluate a vendor's real API surface before a build/buy decision, not just their marketing docs, with an honest read on what's actually supported.</p>
+            </div>
+          </div>
+          <div class="persona-card reveal" data-reveal-group="persona">
+            <div class="persona-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path stroke-linecap="round" stroke-linejoin="round" d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            <div>
+              <h3>Engineering managers &amp; team leads</h3>
+              <p>Onboard a new hire onto a platform the team already knows, without handing them a stale wiki page and a Slack thread to dig through.</p>
+            </div>
+          </div>
+          <div class="persona-card reveal" data-reveal-group="persona">
+            <div class="persona-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg></div>
+            <div>
+              <h3>CTOs &amp; technical decision-makers</h3>
+              <p>A fast, honest read on whether a platform's API can actually do what the vendor claims, before your team commits to it.</p>
+            </div>
+          </div>
+          <div class="persona-card reveal" data-reveal-group="persona">
+            <div class="persona-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.14.42.43.77.82.98.28.14.6.22.94.22"/></svg></div>
+            <div>
+              <h3>DevEx &amp; platform teams</h3>
+              <p>Give every engineer on the team the same grounded, cited platform knowledge instead of scattered tribal notes and outdated internal wikis.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features">
+      <div class="container">
+        <div class="section-head center reveal">
+          <p class="kicker">What you get</p>
+          <h2>One import, a complete integration picture</h2>
+          <p>Everything below runs identically on the web app, the CLI, and MCP - same functions, three surfaces.</p>
+        </div>
+        <div class="feature-grid">
+          <div class="feature-card span-lg reveal" data-reveal-group="features">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path stroke-linecap="round" d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+            <h3>A full, cited understanding</h3>
+            <p>Architecture, auth flow, data model, entity relationships as a real diagram, common workflows, pitfalls, and security observations - generated from the spec and docs you pointed it at, not a generic template.</p>
+          </div>
+          <div class="feature-card reveal" data-reveal-group="features">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg></div>
+            <h3>Never a fabricated citation</h3>
+            <p>Every answer is tagged with where it came from: a doc excerpt with a real similarity score, a live web result with a URL, or the model's own knowledge, flagged unverified.</p>
+          </div>
+          <div class="feature-card reveal" data-reveal-group="features">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg></div>
+            <h3>Real, syntax-checked starter code</h3>
+            <p>The auth handshake plus one working call - never a stub dressed up as working code. Unsupported auth schemes get an honest, labeled stub with a stated reason instead.</p>
+          </div>
+          <div class="feature-card span-wide reveal" data-reveal-group="features">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg></div>
+            <div>
+              <h3>Real threads, not one chat box</h3>
+              <p>Claude/ChatGPT-style: multiple named conversations per platform, or grounded across several platforms at once, each citation tagged with which one it came from.</p>
+            </div>
+          </div>
+          <div class="feature-card span-wide reveal" data-reveal-group="features">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path stroke-linecap="round" d="M14 2v6h6M9 15h6M9 11h6"/></svg></div>
+            <div>
+              <h3>A paste-ready IDE handoff</h3>
+              <p>Task, auth, starter code, <code>.env.example</code>, and real pitfalls in one Markdown brief - optionally folding an LLM-distilled summary of a chat thread in too.</p>
+            </div>
+          </div>
+          <div class="feature-card span-wide reveal" data-reveal-group="features">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/><path stroke-linecap="round" d="M9 9h.01M9 15h6M9 12h6"/></svg></div>
+            <div>
+              <h3>MCP for your coding agent</h3>
+              <p>Twelve tools give any MCP-speaking coding agent (Claude Code, Cursor, Codex CLI, Gemini CLI, and more) the exact same grounded understanding, mid-session, no copy-pasting docs into a chat window.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SHOWCASE -->
+    <section id="showcase">
+      <div class="container">
+        <div class="section-head center reveal">
+          <p class="kicker">See it in action</p>
+          <h2>A real interface, not a proof of concept</h2>
+        </div>
+        <div class="gallery">
+          <div class="compare-wrap gallery-full reveal" data-reveal-group="gallery">
+            <div class="compare" data-compare tabindex="0" role="slider" aria-label="Drag to compare Threads in dark and light mode" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+              <img class="compare-base" src="assets/img/threads-dark.png" alt="Scout's flattened Threads tab: a real thread spanning Stripe and HubSpot, dark mode" loading="lazy" data-fade  draggable="false" width="1280" height="720" />
+              <div class="compare-overlay">
+                <img src="assets/img/threads-light.png" alt="The same flattened multi-platform thread in light mode" loading="lazy" data-fade  draggable="false" width="1280" height="720" />
+              </div>
+              <span class="compare-tag compare-tag-left">Dark</span>
+              <span class="compare-tag compare-tag-right">Light</span>
+              <div class="compare-handle">
+                <span class="compare-grip">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 6-6 6 6 6M15 6l6 6-6 6"/></svg>
+                </span>
+              </div>
+            </div>
+            <div class="gallery-caption compare-caption"><strong>Threads, drag to compare</strong>One thread grounded in two platforms at once, each citation tagged by source - in both themes.</div>
+          </div>
+          <div class="gallery-item reveal" data-reveal-group="gallery">
+            <img src="assets/img/understanding-entity-diagram.png" alt="A real Stripe entity-relationship diagram generated from the imported spec, dark mode" loading="lazy" data-fade  width="1400" height="900" />
+            <div class="gallery-caption"><strong>Entity relationships</strong>A real Mermaid diagram synthesized from the imported spec, not a hand-drawn template.</div>
+          </div>
+          <div class="gallery-item reveal" data-reveal-group="gallery">
+            <img src="assets/img/api-explorer.png" alt="API Explorer listing every real Stripe endpoint from the imported spec" loading="lazy" data-fade  width="1400" height="900" />
+            <div class="gallery-caption"><strong>API Explorer</strong>Every declared endpoint, method-color-coded and searchable, no scrolling through YAML.</div>
+          </div>
+          <div class="gallery-item reveal" data-reveal-group="gallery">
+            <img src="assets/img/starter-code.png" alt="Scout refusing to fabricate write-call code, showing the real read-call skeleton and an explicit warning instead" loading="lazy" data-fade  width="1400" height="900" />
+            <div class="gallery-caption"><strong>Honest starter code</strong>A write-only workflow gets an explicit warning, never code that quietly does the wrong thing.</div>
+          </div>
+          <div class="gallery-item reveal" data-reveal-group="gallery">
+            <img src="assets/img/ide-handoff.png" alt="The IDE handoff section folding a real chat thread's findings into the brief before assembling it" loading="lazy" data-fade  width="1400" height="900" />
+            <div class="gallery-caption"><strong>IDE handoff</strong>A chat thread's findings folded straight into the paste-ready brief.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SURFACES -->
+    <section id="surfaces">
+      <div class="container">
+        <div class="section-head center reveal">
+          <p class="kicker">Three surfaces, one pipeline</p>
+          <h2>Web app, CLI, or MCP - never a separate implementation</h2>
+          <p>Every tool here is a thin wrapper around the same agent/store functions, so there's nothing to fall out of sync.</p>
+        </div>
+        <div class="surfaces">
+          <div class="surface-card reveal" data-reveal-group="surfaces">
+            <span class="badge">Web app</span>
+            <h3><code>scout serve</code></h3>
+            <p>Opens at <code>http://127.0.0.1:4207</code>, no login, nothing leaves your machine.</p>
+            <ul>
+              <li>Runs, New, Threads, Settings, sidebar collapsible to icon-only</li>
+              <li>API Explorer with every endpoint, method-color-coded</li>
+              <li>Understanding page with table of contents + entity diagram</li>
+            </ul>
+          </div>
+          <div class="surface-card reveal" data-reveal-group="surfaces">
+            <span class="badge">Terminal</span>
+            <h3><code>scout &lt;command&gt;</code></h3>
+            <p>Every capability the web app has, scriptable from a shell.</p>
+            <ul>
+              <li><code>understand</code>, <code>chat</code>, <code>generate</code>, <code>handoff</code></li>
+              <li><code>diff</code>, <code>refresh</code>, <code>watch</code>, <code>export</code></li>
+              <li><code>docs add/list/rm</code>, <code>connectors</code>, <code>config</code></li>
+            </ul>
+          </div>
+          <div class="surface-card reveal" data-reveal-group="surfaces">
+            <span class="badge">Coding agents</span>
+            <h3><code>scout mcp</code></h3>
+            <p>A standard stdio MCP server - works with any MCP client, 12 tools, added once.</p>
+            <ul>
+              <li>Claude Code, Claude Desktop, Cursor</li>
+              <li>Codex CLI, Gemini CLI, and more</li>
+              <li>Same understanding, pulled mid-task, no copy-paste</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXAMPLES -->
+    <section id="examples">
+      <div class="container">
+        <div class="section-head center reveal">
+          <p class="kicker">Real examples</p>
+          <h2>Verified end-to-end against real, public specs</h2>
+        </div>
+        <div class="table-wrap reveal">
+          <table>
+            <thead>
+              <tr><th>Platform</th><th>Command</th><th>What Scout found</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Stripe</strong></td>
+                <td><code>scout understand https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json --docs https://docs.stripe.com</code></td>
+                <td>Auth is HTTP Basic, not Bearer - real templates don't cover it yet, so <code>scout generate</code> correctly stubs instead of guessing.</td>
+              </tr>
+              <tr>
+                <td><strong>HubSpot</strong> (Contacts)</td>
+                <td><code>scout understand &lt;hubspot-openapi-url&gt; --docs https://developers.hubspot.com/docs/api/crm/contacts</code></td>
+                <td>Real, syntax-validated TypeScript for the <code>api_key_query</code> auth scheme, plus 25+ real pitfalls pulled straight from the docs.</td>
+              </tr>
+              <tr>
+                <td><strong>GitHub</strong> (REST API)</td>
+                <td><code>scout understand &lt;github-openapi-url&gt; --docs https://docs.github.com/en/rest</code></td>
+                <td>Correctly identified <code>none</code>-scheme public endpoints vs. token-gated ones, and generated an honest stub rather than assuming a default.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="text-align:center;margin-top:20px;color:var(--fg-muted);font-size:0.92rem">
+          More platforms, full transcripts, and the honesty behavior explained: <a href="docs.html#examples" style="color:var(--color-accent-600);text-decoration:underline">read the examples in the docs →</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- COMPARISON -->
+    <section id="compare">
+      <div class="container">
+        <div class="section-head center reveal">
+          <p class="kicker">How it compares</p>
+          <h2>Not a chat wrapper, not a spec viewer</h2>
+          <p>Where Scout sits next to the tools you'd otherwise reach for.</p>
+        </div>
+        <div class="table-wrap reveal">
+          <table>
+            <thead>
+              <tr>
+                <th>Capability</th>
+                <th>Scout</th>
+                <th>Generic LLM chat</th>
+                <th>Swagger / OpenAPI viewer</th>
+                <th>Reading docs manually</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Cited, verifiable answers</td>
+                <td><span class="badge-pill yes">Yes</span></td>
+                <td><span class="badge-pill no">No</span></td>
+                <td><span class="badge-pill no">N/A</span></td>
+                <td><span class="badge-pill partial">You verify</span></td>
+              </tr>
+              <tr>
+                <td>Cross-checks spec against real docs</td>
+                <td><span class="badge-pill yes">Yes</span></td>
+                <td><span class="badge-pill no">No</span></td>
+                <td><span class="badge-pill no">No</span></td>
+                <td><span class="badge-pill partial">Manually</span></td>
+              </tr>
+              <tr>
+                <td>Real, syntax-checked starter code</td>
+                <td><span class="badge-pill yes">Yes</span></td>
+                <td><span class="badge-pill partial">Unverified</span></td>
+                <td><span class="badge-pill no">No</span></td>
+                <td><span class="badge-pill no">No</span></td>
+              </tr>
+              <tr>
+                <td>MCP tool for coding agents</td>
+                <td><span class="badge-pill yes">Yes</span></td>
+                <td><span class="badge-pill no">No</span></td>
+                <td><span class="badge-pill no">No</span></td>
+                <td><span class="badge-pill no">No</span></td>
+              </tr>
+              <tr>
+                <td>Detects when docs drift</td>
+                <td><span class="badge-pill yes">Yes</span></td>
+                <td><span class="badge-pill no">No</span></td>
+                <td><span class="badge-pill no">No</span></td>
+                <td><span class="badge-pill no">No</span></td>
+              </tr>
+              <tr>
+                <td>Local-first, no telemetry</td>
+                <td><span class="badge-pill yes">Yes</span></td>
+                <td><span class="badge-pill no">Cloud</span></td>
+                <td><span class="badge-pill partial">Depends on host</span></td>
+                <td><span class="badge-pill yes">Yes</span></td>
+              </tr>
+              <tr>
+                <td>Cost beyond your own API key</td>
+                <td><span class="badge-pill yes">None</span></td>
+                <td><span class="badge-pill partial">Subscription</span></td>
+                <td><span class="badge-pill yes">None</span></td>
+                <td><span class="badge-pill yes">None</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="text-align:center;margin-top:20px;color:var(--fg-muted);font-size:0.85rem">
+          "Generic LLM chat" means ChatGPT/Claude/etc. with a docs URL pasted in, no tool access to re-search or cross-check.
+        </p>
+      </div>
+    </section>
+
+    <!-- QUICKSTART -->
+    <section id="quickstart">
+      <div class="container-narrow">
+        <div class="section-head reveal">
+          <p class="kicker">Two minutes to a grounded blueprint</p>
+          <h2>From install to a cited chat, in one sitting</h2>
+        </div>
+        <div class="steps">
+          <div class="step reveal" data-reveal-group="steps">
+            <div class="step-num">1</div>
+            <div>
+              <h3>Install &amp; add a provider</h3>
+              <p>Node 22+, no account, no telemetry. One LLM provider for synthesis and chat.</p>
+              <div class="code-block">
+                <div class="code-head"><span>bash</span><button class="copy-btn" data-copy="npm install -g @dotapk7/scoutcli
+scout config llm add openai --api-key sk-..." aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+                <pre><span class="tok-cmd">npm</span> install -g @dotapk7/scoutcli
+<span class="tok-comment"># or: anthropic, azure-openai, openrouter, openai-compatible (Ollama, LM Studio, vLLM)</span>
+<span class="tok-cmd">scout</span> config llm add openai <span class="tok-flag">--api-key</span> <span class="tok-string">sk-...</span></pre>
+              </div>
+            </div>
+          </div>
+          <div class="step reveal" data-reveal-group="steps">
+            <div class="step-num">2</div>
+            <div>
+              <h3>Point it at a platform</h3>
+              <p>The OpenAPI/Swagger spec (URL or file), and optionally doc pages to crawl for grounded chat.</p>
+              <div class="code-block">
+                <div class="code-head"><span>bash</span><button class="copy-btn" data-copy="scout understand https://petstore3.swagger.io/api/v3/openapi.json --docs https://example.com/docs" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+                <pre><span class="tok-cmd">scout</span> understand https://petstore3.swagger.io/api/v3/openapi.json <span class="tok-flag">--docs</span> <span class="tok-string">https://example.com/docs</span></pre>
+              </div>
+            </div>
+          </div>
+          <div class="step reveal" data-reveal-group="steps">
+            <div class="step-num">3</div>
+            <div>
+              <h3>Open the web app</h3>
+              <p>Runs, New, Threads, API Explorer, Settings - everything lives at <code>127.0.0.1:4207</code>.</p>
+              <div class="code-block">
+                <div class="code-head"><span>bash</span><button class="copy-btn" data-copy="scout serve" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+                <pre><span class="tok-cmd">scout</span> serve</pre>
+              </div>
+            </div>
+          </div>
+          <div class="step reveal" data-reveal-group="steps">
+            <div class="step-num">4</div>
+            <div>
+              <h3>Wire it into your coding agent</h3>
+              <p>One command, and your coding agent pulls real, cited platform knowledge mid-task instead of guessing.</p>
+              <div class="code-block">
+                <div class="code-head"><span>bash</span><button class="copy-btn" data-copy="claude mcp add scout -- scout mcp" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+                <pre><span class="tok-cmd">claude</span> mcp add scout -- scout mcp</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:36px">
+          <a class="btn btn-primary" href="docs.html#quickstart">Full quickstart in the docs</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section id="get-started">
+      <div class="container">
+        <div class="cta-band reveal">
+          <h2>Open source, local-first, no hidden costs beyond your own API key.</h2>
+          <p>MIT licensed. Star it, fork it, or open a PR - connectors are just JSON.</p>
+          <div class="hero-ctas" style="margin-bottom:0">
+            <a class="btn btn-primary" href="https://github.com/prabhuavula7/scout" target="_blank" rel="noopener">Star on GitHub</a>
+            <a class="btn btn-secondary" href="docs.html">Read the docs</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <a class="brand" href="index.html" style="margin-bottom:12px">
+            <svg class="brand-mark" viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="16" r="15" fill="var(--color-accent-500)"/>
+              <path d="M21.5 10.5 17.8 17.8 10.5 21.5 14.2 14.2 21.5 10.5Z" fill="#FFFAF5"/>
+            </svg>
+            Scout
+          </a>
+          <p>Local-first integration blueprints and grounded chat for any OpenAPI-documented platform. No account, no hosted backend, no telemetry.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Product</h4>
+          <a href="index.html#features">Features</a>
+          <a href="index.html#surfaces">CLI / Web / MCP</a>
+          <a href="index.html#examples">Examples</a>
+          <a href="docs.html">Documentation</a>
+        </div>
+        <div class="footer-col">
+          <h4>Project</h4>
+          <a href="https://github.com/prabhuavula7/scout" target="_blank" rel="noopener">GitHub repo</a>
+          <a href="https://github.com/prabhuavula7/scout/issues" target="_blank" rel="noopener">Issues</a>
+          <a href="https://github.com/prabhuavula7/scout/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
+          <a href="https://github.com/prabhuavula7/scout/blob/main/ROADMAP.md" target="_blank" rel="noopener">Roadmap</a>
+        </div>
+        <div class="footer-col">
+          <h4>Resources</h4>
+          <a href="https://www.npmjs.com/package/@dotapk7/scoutcli" target="_blank" rel="noopener">npm package</a>
+          <a href="https://github.com/prabhuavula7/scout/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
+          <a href="docs.html#faq">FAQ</a>
+          <a href="https://github.com/prabhuavula7/scout/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Scout. Built by Prabhu Avula.</span>
+        <span class="brand"><a href="https://github.com/prabhuavula7/scout" target="_blank" rel="noopener" style="text-decoration:none">github.com/prabhuavula7/scout</a></span>
+      </div>
+    </div>
+  </footer>
+
+  <button type="button" class="scroll-top-btn" data-scroll-top aria-label="Scroll to top">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5M5 12l7-7 7 7"/></svg>
+  </button>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

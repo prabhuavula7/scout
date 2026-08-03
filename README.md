@@ -1,9 +1,10 @@
 # Scout
 
 [![CI](https://github.com/prabhuavula7/scout/actions/workflows/ci.yml/badge.svg)](https://github.com/prabhuavula7/scout/actions/workflows/ci.yml)
+[![Website](https://github.com/prabhuavula7/scout/actions/workflows/pages.yml/badge.svg)](https://prabhuavula7.github.io/scout/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Point Scout at a platform's OpenAPI spec and docs. Get a cited, browsable integration blueprint and a real threaded chat assistant, in a local web app, in minutes.**
+**[prabhuavula7.github.io/scout](https://prabhuavula7.github.io/scout/)** · **Point Scout at a platform's OpenAPI spec and docs. Get a cited, browsable integration blueprint and a real threaded chat assistant, in a local web app, in minutes.**
 
 Scout is primarily a web app: `scout serve` opens it at `http://127.0.0.1`, no login, nothing leaves your machine. It also ships an equally capable CLI and an MCP server, so Claude Code, Cursor, Codex, and Gemini CLI can pull the same grounded understanding directly into their own context instead of guessing at a platform's API shape from training data.
 
@@ -141,6 +142,7 @@ Full option list on any command: `scout <command> --help`. Everything else, prov
 
 ## Documentation
 
+- **[prabhuavula7.github.io/scout](https://prabhuavula7.github.io/scout/)**, the same reference below as a browsable site.
 - [Quickstart](docs/quickstart.md), five minutes from install to a grounded chat.
 - [Why Scout exists](docs/why-scout.md), the honesty model and why OpenAPI plus docs beats either alone.
 - [MCP reference](docs/mcp.md), all eleven tools, every agent's config format.
