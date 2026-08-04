@@ -177,6 +177,83 @@
     update();
   }
 
+  // Smooth expand/collapse for the FAQ accordion (native <details> can't transition height on its own).
+  // Exclusivity (one open at a time) is handled entirely here rather than via the `name` attribute,
+  // since the browser's native same-name auto-close is instant and races with our own close animation.
+  function initFaqAnimation() {
+    var lists = document.querySelectorAll(".faq-list");
+    if (!lists.length) return;
+
+    var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    lists.forEach(function (list) {
+      var controllers = [];
+
+      list.querySelectorAll(".faq-item").forEach(function (item) {
+        var summary = item.querySelector("summary");
+        var answer = item.querySelector(".faq-answer");
+        if (!summary || !answer) return;
+        var animation = null;
+
+        function collapse(instant) {
+          if (!item.open) return;
+          if (animation) animation.cancel();
+          if (instant || prefersReduced) {
+            item.open = false;
+            return;
+          }
+          item.style.overflow = "hidden";
+          var startHeight = item.offsetHeight;
+          animation = item.animate(
+            { height: [startHeight + "px", summary.offsetHeight + "px"] },
+            { duration: 220, easing: "cubic-bezier(0.4, 0, 0.2, 1)" }
+          );
+          animation.onfinish = function () {
+            item.open = false;
+            item.style.height = "";
+            item.style.overflow = "";
+            animation = null;
+          };
+        }
+
+        function expand() {
+          controllers.forEach(function (c) {
+            if (c.item !== item) c.collapse();
+          });
+          if (prefersReduced) {
+            item.open = true;
+            return;
+          }
+          var startHeight = item.offsetHeight;
+          item.style.overflow = "hidden";
+          item.open = true;
+          var endHeight = summary.offsetHeight + answer.offsetHeight;
+          if (animation) animation.cancel();
+          animation = item.animate(
+            { height: [startHeight + "px", endHeight + "px"] },
+            { duration: 220, easing: "cubic-bezier(0.4, 0, 0.2, 1)" }
+          );
+          animation.onfinish = function () {
+            item.style.height = "";
+            item.style.overflow = "";
+            animation = null;
+          };
+        }
+
+        summary.addEventListener("click", function (e) {
+          e.preventDefault();
+          if (item.open) {
+            collapse();
+          } else {
+            expand();
+          }
+        });
+
+        controllers.push({ item: item, collapse: collapse });
+      });
+    });
+  }
+
   // Docs page: highlight active sidebar link on scroll
   function initDocsScrollSpy() {
     var sections = document.querySelectorAll(".docs-section[id]");
@@ -217,5 +294,6 @@
     initImageFade();
     initScrollTop();
     initDocsScrollSpy();
+    initFaqAnimation();
   });
 })();

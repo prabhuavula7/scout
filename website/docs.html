@@ -49,6 +49,7 @@
         <a class="nav-link" href="index.html#examples">Examples</a>
         <a class="nav-link" href="index.html#compare">Compare</a>
         <a class="nav-link" href="index.html#quickstart">Quickstart</a>
+        <a class="nav-link" href="index.html#faq">FAQ</a>
         <a class="nav-link active" href="docs.html">Docs</a>
         <a class="nav-link" href="https://github.com/prabhuavula7/scout" target="_blank" rel="noopener">GitHub</a>
       </nav>
@@ -108,7 +109,6 @@
             <a href="#docker">Docker</a>
             <a href="#development">Development</a>
             <a href="#examples">Real examples</a>
-            <a href="#faq">FAQ</a>
           </div>
         </nav>
       </aside>
@@ -753,50 +753,6 @@ docker compose up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
           <div class="callout">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 16v-4M12 8h.01"/></svg>
             <div>Try it yourself with other public specs - Twilio, DigitalOcean, Slack - verified reachable in <a href="https://github.com/prabhuavula7/scout/blob/main/docs/examples.md" target="_blank" rel="noopener" style="color:var(--color-accent-600);text-decoration:underline">docs/examples.md</a> on GitHub.</div>
-          </div>
-        </section>
-
-        <!-- FAQ -->
-        <section class="docs-section" id="faq">
-          <h2>FAQ</h2>
-
-          <div class="faq-list">
-          <details class="faq-item" name="faq" open>
-            <summary>Does Scout send my data anywhere?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
-            <div class="faq-answer"><p>No hosted backend, no accounts, no telemetry. The only network calls are the ones you configure: the platform's spec/docs URLs, your chosen LLM provider, and your chosen search provider (if enabled). Everything else stays under <code>~/.scout/</code>.</p></div>
-          </details>
-          <details class="faq-item" name="faq">
-            <summary>Why isn't this just ChatGPT with the docs pasted in?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
-            <div class="faq-answer"><p>A generic chat model has no way to tell "this is definitely true" from "this sounds plausible." Scout cross-checks the OpenAPI spec against crawled docs and is instructed to say "missing documentation" instead of guessing, with real tool access to re-search mid-conversation.</p></div>
-          </details>
-          <details class="faq-item" name="faq">
-            <summary>Why isn't this Swagger UI?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
-            <div class="faq-answer"><p>Swagger UI renders a spec. It doesn't crawl docs, synthesize an architecture overview, answer questions, generate starter code, or expose an MCP tool. Scout's primary output is an understanding - a spec viewer is a side effect of already having imported the endpoints.</p></div>
-          </details>
-          <details class="faq-item" name="faq">
-            <summary>Does this cost money to run?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
-            <div class="faq-answer"><p>Scout itself is free and open source. You pay whatever your configured LLM/search provider charges. <code>scout understand</code> prints a size estimate before starting, and local models via Ollama/LM Studio work for zero marginal cost.</p></div>
-          </details>
-          <details class="faq-item" name="faq">
-            <summary>Does it work with local/open-source models?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
-            <div class="faq-answer"><p>Yes - anything speaking the OpenAI chat-completions wire protocol works via <code>scout config llm add openai-compatible --base-url &lt;endpoint&gt;</code>: Ollama, LM Studio, vLLM, or a hosted OpenRouter model.</p></div>
-          </details>
-          <details class="faq-item" name="faq">
-            <summary>What happens to my API keys?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
-            <div class="faq-answer"><p>Stored in <code>~/.scout/config.json</code> on your machine, never printed back by <code>scout config llm list</code>, never transmitted anywhere except directly to the provider you configured.</p></div>
-          </details>
-          <details class="faq-item" name="faq">
-            <summary>Can multiple people on my team share runs?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
-            <div class="faq-answer"><p>Not today - <code>LocalFileStore</code> is single-machine by design. A dormant hosted mode (<code>apps/api</code>, <code>apps/workers</code>, Postgres-backed, multi-user) exists in the repo for anyone who wants a shared deployment.</p></div>
-          </details>
-          <details class="faq-item" name="faq">
-            <summary>What if the platform doesn't have a public OpenAPI spec?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
-            <div class="faq-answer"><p>Scout needs one - that's the ground-truth contract the honesty model is built on. Many platforms without an advertised spec still have one (check <code>/openapi.json</code>, <code>/swagger.json</code>). If a platform genuinely has none, Scout isn't the right tool yet.</p></div>
-          </details>
-          <details class="faq-item" name="faq">
-            <summary>Is the generated code safe to run against a live API?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></summary>
-            <div class="faq-answer"><p>It's syntax-checked, not execution-tested. "Syntax validated" means it parses, not that the call succeeds or matches your account's permissions. Treat it as a correct starting point, not a finished integration.</p></div>
-          </details>
           </div>
         </section>
       </div>
