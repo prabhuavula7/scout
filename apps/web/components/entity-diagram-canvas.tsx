@@ -108,13 +108,14 @@ export function EntityDiagramCanvas({
 }) {
   const [hovered, setHovered] = useState<DataModelEntry | null>(null);
   const isDark = useIsDarkMode();
+  const entities = dataModel ?? [];
 
   const relationships = useMemo(
-    () => usableRelationships(entityRelationships, dataModel),
-    [entityRelationships, dataModel],
+    () => usableRelationships(entityRelationships ?? [], entities),
+    [entityRelationships, entities],
   );
 
-  const nodes = useMemo(() => layout(dataModel, relationships), [dataModel, relationships]);
+  const nodes = useMemo(() => layout(entities, relationships), [entities, relationships]);
 
   // Edge/label colors are set inline (not Tailwind classes) since react-flow renders
   // them as raw SVG attributes. The canvas is inverted per-theme (light canvas + black
@@ -143,7 +144,7 @@ export function EntityDiagramCanvas({
     [relationships, edgeStroke, labelText, labelBg],
   );
 
-  if (dataModel.length === 0) {
+  if (entities.length === 0) {
     return <p className="text-sm text-stone-500">No entities were found to diagram.</p>;
   }
 

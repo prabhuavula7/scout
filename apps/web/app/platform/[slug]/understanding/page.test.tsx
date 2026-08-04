@@ -14,6 +14,7 @@ const RUN_WITH_UNDERSTANDING = {
     architectureOverview: "Overview.",
     authenticationFlow: "Auth flow.",
     dataModel: [],
+    entityRelationships: [],
     mermaidErDiagram: "erDiagram",
     commonWorkflows: [],
     mermaidSequenceDiagram: "sequenceDiagram",
