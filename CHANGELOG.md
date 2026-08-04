@@ -4,6 +4,13 @@ All notable changes to Scout are documented here. Format loosely follows [Keep a
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-08-04
+
+### Changed
+
+- **Entity-relationship and sequence diagrams are now interactive instead of static images.** The Understanding page's entity-relationship diagram was a static Mermaid-rendered SVG; it's now a pannable, zoomable `react-flow` canvas driven by `entityRelationships`/`dataModel`, structured data the understanding agent already generated but the web app never rendered from. Laid out with `dagre` (hierarchical, not a naive grid) so edges route around nodes instead of through them; hovering a node shows its full description and key fields. Canvas is theme-inverted for legibility: light mode is a light canvas with black blocks and white text, dark mode the reverse. The sequence diagram stays on Mermaid (no structured data exists to drive a custom renderer) but is now wrapped in a pan/zoom container with zoom in/out/fit-to-panel controls, and switches Mermaid's own theme between `neutral` and `dark` so its text doesn't go illegible against a dark background.
+- Added `.github/workflows/publish.yml`: on push to main touching `packages/cli/package.json`, compares the local version against what's live on npm and publishes only when it changed.
+
 ## [2.4.0] - 2026-07-27
 
 ### Added
