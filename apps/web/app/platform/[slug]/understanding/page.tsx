@@ -15,6 +15,7 @@ import {
   useRunResearch,
 } from "@/lib/use-runs";
 import { MermaidDiagram } from "@/components/mermaid-diagram";
+import { EntityDiagramCanvas } from "@/components/entity-diagram-canvas";
 import { TableOfContents } from "@/components/table-of-contents";
 import { PipelineProgress } from "@/components/pipeline-progress";
 
@@ -122,7 +123,10 @@ export default function UnderstandingPage({ params }: { params: Promise<{ slug: 
           </div>
         </Section>
         <Section id="entity-relationships" title="Entity relationships">
-          <MermaidDiagram chart={understanding.mermaidErDiagram} />
+          <EntityDiagramCanvas
+            dataModel={understanding.dataModel}
+            entityRelationships={understanding.entityRelationships}
+          />
         </Section>
         <Section id="common-workflows" title="Common workflows">
           <div className="space-y-4">
