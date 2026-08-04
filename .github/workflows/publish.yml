@@ -1,0 +1,57 @@
+name: Publish to npm
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/cli/package.json"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish @dotapk7/scoutcli
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.29.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check if the version changed
+        id: version
+        run: |
+          LOCAL_VERSION=$(node -p "require('./packages/cli/package.json').version")
+          PUBLISHED_VERSION=$(npm view @dotapk7/scoutcli version 2>/dev/null || echo "none")
+          echo "Local: $LOCAL_VERSION -- published: $PUBLISHED_VERSION"
+          if [ "$LOCAL_VERSION" != "$PUBLISHED_VERSION" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Typecheck, lint, test
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          pnpm typecheck
+          pnpm lint
+          pnpm test
+
+      - name: Build
+        if: steps.version.outputs.changed == 'true'
+        run: pnpm --filter @dotapk7/scoutcli... run build
+
+      - name: Publish
+        if: steps.version.outputs.changed == 'true'
+        run: pnpm --filter @dotapk7/scoutcli publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
