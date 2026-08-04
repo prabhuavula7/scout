@@ -77,6 +77,18 @@ function targetOf(summary: UnifiedThreadSummary): ThreadTarget {
     : { kind: "multi", threadId: summary.id };
 }
 
+// A "single" thread's id is only unique within its own run's store -- every run gets a
+// default thread literally id'd "main", so flattening threads across every platform (as
+// this page does) needs a key that's actually unique across the whole list. "multi" thread
+// ids are already globally unique (MultiRunThreadStore-generated), so they pass through as-is.
+function uniqueKey(summary: UnifiedThreadSummary): string {
+  return summary.kind === "single" ? `${summary.platformSlugs[0]}:${summary.id}` : summary.id;
+}
+
+function uniqueKeyOf(target: ThreadTarget): string {
+  return target.kind === "single" ? `${target.slug}:${target.threadId}` : target.threadId;
+}
+
 /** Inline "new thread" picker: check one run for a single-run thread, or
  * two-plus for a thread that spans them all. Kept as a small popover rather
  * than a separate page since the only real decision is "which platform(s)". */
@@ -161,13 +173,13 @@ export function ThreadsView() {
   // Default to the most recently updated thread once the list loads, so
   // landing on /threads with no query params isn't just a blank picker.
   useEffect(() => {
-    if (!selectedThreadId && threads && threads.length > 0) selectThread(threads[0]!.id);
+    if (!selectedThreadId && threads && threads.length > 0) selectThread(uniqueKey(threads[0]!));
   }, [selectedThreadId, threads]);
 
   const filteredThreads = (threads ?? []).filter(
     (t) => !platformFilter || t.platformSlugs.includes(platformFilter),
   );
-  const selectedSummary = threads?.find((t) => t.id === selectedThreadId);
+  const selectedSummary = threads?.find((t) => uniqueKey(t) === selectedThreadId);
 
   function handleRename(e: React.MouseEvent, summary: UnifiedThreadSummary) {
     e.preventDefault();
@@ -183,9 +195,9 @@ export function ThreadsView() {
     e.stopPropagation();
     if (!window.confirm(`Delete thread "${summary.title}"? This can't be undone.`)) return;
     deleteThread.mutate(targetOf(summary));
-    if (summary.id === selectedThreadId) {
-      const remaining = filteredThreads.filter((t) => t.id !== summary.id);
-      if (remaining.length > 0) selectThread(remaining[0]!.id);
+    if (uniqueKey(summary) === selectedThreadId) {
+      const remaining = filteredThreads.filter((t) => uniqueKey(t) !== uniqueKey(summary));
+      if (remaining.length > 0) selectThread(uniqueKey(remaining[0]!));
       else router.push("/threads" as Parameters<typeof router.push>[0]);
     }
   }
@@ -209,7 +221,7 @@ export function ThreadsView() {
           </button>
         </div>
         {showNewThreadPanel && (
-          <NewThreadPanel onClose={() => setShowNewThreadPanel(false)} onCreated={(target) => selectThread(target.threadId)} />
+          <NewThreadPanel onClose={() => setShowNewThreadPanel(false)} onCreated={(target) => selectThread(uniqueKeyOf(target))} />
         )}
 
         <select
@@ -231,12 +243,12 @@ export function ThreadsView() {
           )}
           {filteredThreads.map((summary) => (
             <div
-              key={summary.id}
-              onClick={() => selectThread(summary.id)}
+              key={uniqueKey(summary)}
+              onClick={() => selectThread(uniqueKey(summary))}
               role="button"
               tabIndex={0}
               className={`group flex items-center justify-between gap-1 rounded-lg px-2.5 py-1.5 text-sm transition ${
-                summary.id === selectedThreadId
+                uniqueKey(summary) === selectedThreadId
                   ? "bg-stone-100 font-medium text-stone-900 dark:bg-stone-800 dark:text-stone-50"
                   : "text-stone-500 hover:bg-stone-50 hover:text-stone-900 dark:hover:bg-stone-900 dark:hover:text-stone-100"
               }`}
